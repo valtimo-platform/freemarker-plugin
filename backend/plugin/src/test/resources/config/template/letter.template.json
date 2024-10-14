@@ -1,0 +1,9 @@
+{
+  "templateKey": "letter-template",
+  "caseDefinitionName": "profile",
+  "templateType": "mail",
+  "metadata": {
+    "testKey": "testValue"
+  },
+  "contentRef": "/config/template/letter.ftlh"
+}
