@@ -24,7 +24,7 @@ pluginManager.withPlugin("maven-publish") {
 
                 pom {
                     name = "Freemarker template module"
-                    description = "The freemarker module for creating templates with FreeMarker"
+                    description = "A module for creating templates with the FreeMarker template engine"
                     developers {
                         developer {
                             id = "team-valtimo"
