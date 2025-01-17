@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ritense.valtimoplugins.freemarker.plugin.mail
+package com.ritense.valtimoplugins.freemarker.plugin.text
 
 import com.ritense.plugin.annotation.Plugin
 import com.ritense.plugin.annotation.PluginAction
@@ -23,52 +23,38 @@ import com.ritense.processdocument.domain.impl.CamundaProcessInstanceId
 import com.ritense.processdocument.service.ProcessDocumentService
 import com.ritense.processlink.domain.ActivityTypeWithEventName.SERVICE_TASK_START
 import com.ritense.resource.service.TemporaryResourceStorageService
-import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_MAIL
+import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_TEXT
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
 import org.camunda.bpm.engine.delegate.DelegateExecution
 
 @Plugin(
-    key = "mail-template",
-    title = "Mail template Plugin",
-    description = "Create Mail templates with Freemarker"
+    key = "text-template",
+    title = "Text template Plugin",
+    description = "Create Text templates with Freemarker"
 )
-open class MailTemplatePlugin(
+open class TextTemplatePlugin(
     private val templateService: TemplateService,
     private val processDocumentService: ProcessDocumentService,
     private val storageService: TemporaryResourceStorageService,
 ) {
+
     @PluginAction(
-        key = "generate-mail-file",
-        title = "Generate Mail File",
-        description = "Generates an Mail based on the template and saves it in a temporary file",
+        key = "generate-text-file",
+        title = "Generate Text File",
+        description = "Generates text based on the template and saves it in a temporary file",
         activityTypes = [SERVICE_TASK_START]
     )
-    open fun generateMailFile(
+    open fun generateTextFile(
         execution: DelegateExecution,
-        @PluginActionProperty mailTemplateKey: String,
+        @PluginActionProperty textTemplateKey: String,
         @PluginActionProperty processVariableName: String
     ) {
-        val mailContent = generateMailContent(execution, mailTemplateKey)
-        val resourceId = storageService.store(mailContent.byteInputStream())
+        val textContent = generateTextContent(execution, textTemplateKey)
+        val resourceId = storageService.store(textContent.byteInputStream())
         execution.setVariable(processVariableName, resourceId)
     }
 
-    @PluginAction(
-        key = "generate-mail-content",
-        title = "Generate Mail content",
-        description = "Generates Mail text based on the template and saves the text in a process variable",
-        activityTypes = [SERVICE_TASK_START]
-    )
-    open fun generateMailContent(
-        execution: DelegateExecution,
-        @PluginActionProperty mailTemplateKey: String,
-        @PluginActionProperty processVariableName: String
-    ) {
-        val mailContent = generateMailContent(execution, mailTemplateKey)
-        execution.setVariable(processVariableName, mailContent)
-    }
-
-    private fun generateMailContent(execution: DelegateExecution, templateKey: String): String {
+    private fun generateTextContent(execution: DelegateExecution, templateKey: String): String {
         val document = processDocumentService.getDocument(
             CamundaProcessInstanceId(execution.processInstanceId),
             execution
@@ -76,7 +62,7 @@ open class MailTemplatePlugin(
         return templateService.generate(
             templateKey = templateKey,
             caseDefinitionName = document.definitionId().name(),
-            templateType = TEMPLATE_TYPE_MAIL,
+            templateType = TEMPLATE_TYPE_TEXT,
             document = document,
             processVariables = execution.variables,
         )

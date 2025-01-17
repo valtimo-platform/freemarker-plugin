@@ -22,30 +22,24 @@
   } as obs">
 
     <div class="template-explanation">
-        Mail templates use <a target="_blank" href="https://www.w3schools.com/html/html_intro.asp">HTML</a> for the mail
-        layout. <a target="_blank" href="https://freemarker.apache.org/docs/dgui_quickstart_basics.html">FreeMarker</a>
-        can be used to create placeholders inside the HTML. The data-model for FreeMarker is based upon <a
+        Text Templates use <a target="_blank" href="https://freemarker.apache.org/docs/dgui_quickstart_basics.html">FreeMarker</a>
+        to create placeholders inside the text. The data-model for FreeMarker is based upon nested <a
             target="_blank" href="https://docs.valtimo.nl/reference/modules/value-resolver">Valtimo value-resolvers</a>
         with a slightly different notation. For example: $&#123;doc.firstName&#125;. Retrieves
         the `firstName` from the case.
+
+        Text Templates can be used as value resolvers. For example: $&#123;template.my-text-template&#125; or
+        `template:my-text-template`.
     </div>
 
-    <cds-tabs type="contained">
-        <cds-tab [active]="true" [heading]="'Editor'">
-            <valtimo-editor
-                    [model]="obs.model"
-                    [disabled]="(editorDisabled$ | async) || obs.template?.readOnly"
-                    (validEvent)="onValid($event)"
-                    (valueChangeEvent)="onValueChange($event)"
-                    [fitPage]="true"
-                    [fitPageExtraSpace]="80"
-            ></valtimo-editor>
-        </cds-tab>
-        <cds-tab [heading]="'Viewer'" (selected)="onSelectedTabViewer()">
-            <iframe title="HTML Viewer" id="html-viewer-iframe">
-            </iframe>
-        </cds-tab>
-    </cds-tabs>
+    <valtimo-editor
+            [model]="obs.model"
+            [disabled]="(editorDisabled$ | async) || obs.template?.readOnly"
+            (validEvent)="onValid($event)"
+            (valueChangeEvent)="onValueChange($event)"
+            [fitPage]="true"
+            [fitPageExtraSpace]="80"
+    ></valtimo-editor>
 </ng-container>
 
 <ng-container renderInPageHeader>
@@ -82,10 +76,10 @@
 </ng-container>
 
 <ng-container *ngIf="{templateKey: templateKey$ | async} as obs">
-    <valtimo-mail-template-delete-modal
+    <valtimo-text-template-delete-modal
             [deleteRowKeys]="[obs.templateKey]"
             [showDeleteModal$]="showDeleteModal$"
             (deleteEvent)="onDelete($event)"
     >
-    </valtimo-mail-template-delete-modal>
+    </valtimo-text-template-delete-modal>
 </ng-container>
