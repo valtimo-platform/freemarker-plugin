@@ -11,6 +11,8 @@ For creating HTML mail templates with Freemarker.
 For creating text templates with Freemarker. These text templates can be used in a value-resolver. For example:
 `template:my-template`.
 
+https://github.com/user-attachments/assets/3b27631d-bbda-406e-b6b7-f6e5be21f9b9
+
 # Dependencies
 
 In order to use the plugins, the module needs to be added as a dependency. The
