@@ -45,7 +45,7 @@ dependencies {
 ```json
 {
     "dependencies": {
-        "@valtimo/freemarker": "<valtimo_frontend_version>"
+        "@valtimo-plugins/freemarker": "<valtimo_frontend_version>"
     }
 }
 ```
