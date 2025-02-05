@@ -26,8 +26,9 @@ If not, please specify the artifact version as well.
 ```xml
 <dependencies>
     <dependency>
-        <groupId>com.ritense.valtimo</groupId>
+        <groupId>com.ritense.valtimoplugins</groupId>
         <artifactId>freemarker</artifactId>
+        <version>6.0.0</version>
     </dependency>
 </dependencies>
 ```
@@ -35,7 +36,7 @@ If not, please specify the artifact version as well.
 #### Gradle dependency:
 ```kotlin
 dependencies {
-  implementation("com.ritense.valtimo:freemarker")
+  implementation("com.ritense.valtimoplugins:freemarker:6.0.0")
 }
 ```
 
