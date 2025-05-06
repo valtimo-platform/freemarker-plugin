@@ -28,7 +28,7 @@ dependencies {
 }
 ```
 
-The most recent version can be found in [plugin.properties](plugin.properties).
+The most recent version can be found [here](https://mvnrepository.com/artifact/com.ritense.valtimoplugins/freemarker).
 
 ## Frontend
 
@@ -42,7 +42,7 @@ The following dependency can be added to your `package.json` file:
 }
 ```
 
-The most recent version can be found in [package.json](../../frontend/projects/valtimo-plugins/freemarker/package.json).
+The most recent version can be found [here](https://www.npmjs.com/package/@valtimo-plugins/freemarker?activeTab=versions).
 
 In order to use the plugins in the frontend, the following must be added to your `app.module.ts`:
 
