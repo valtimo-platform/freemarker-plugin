@@ -18,15 +18,17 @@ package com.ritense.valtimoplugins.freemarker.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.ritense.valtimo.contract.annotation.SkipComponentScan
 import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
 import com.ritense.valtimoplugins.freemarker.model.TemplateDeploymentMetadata
-import com.ritense.valtimo.contract.annotation.SkipComponentScan
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.io.InputStream
-import mu.KLogger
-import mu.KotlinLogging
 import org.springframework.boot.context.event.ApplicationReadyEvent
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.context.event.EventListener
+import org.springframework.core.annotation.Order
 import org.springframework.core.io.Resource
 import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.ResourcePatternUtils
@@ -42,6 +44,7 @@ class TemplateDeploymentService(
     private val objectMapper: ObjectMapper,
 ) {
 
+    @Order(-1)
     @EventListener(ApplicationReadyEvent::class)
     fun deployTemplates() {
         logger.info { "Deploying all templates from $PATH" }
@@ -70,10 +73,12 @@ class TemplateDeploymentService(
         }
     }
 
+    @Cacheable(value = [TEMPLATE_EXISTS_CACHE_NAME], key = "{ #template.key, #template.caseDefinitionName, #template.type }")
     fun deploymentFileExists(
         template: ValtimoTemplate
     ) = deploymentFileExists(template.key, template.caseDefinitionName, template.type)
 
+    @Cacheable(value = [TEMPLATE_EXISTS_CACHE_NAME], key = "{ #templateKey, #caseDefinitionName, #templateType }")
     fun deploymentFileExists(
         templateKey: String,
         caseDefinitionName: String?,
@@ -85,6 +90,7 @@ class TemplateDeploymentService(
         }
     }
 
+    // Note: This function is slow. It will scan through the entire jar including jars from dependencies for a '*.template.json'
     @Throws(IOException::class)
     private fun loadResources(): Array<Resource> {
         return ResourcePatternUtils.getResourcePatternResolver(resourceLoader)
@@ -94,5 +100,6 @@ class TemplateDeploymentService(
     companion object {
         private val logger: KLogger = KotlinLogging.logger {}
         const val PATH = "classpath*:**/*.template.json"
+        private const val TEMPLATE_EXISTS_CACHE_NAME = "template.exists"
     }
 }

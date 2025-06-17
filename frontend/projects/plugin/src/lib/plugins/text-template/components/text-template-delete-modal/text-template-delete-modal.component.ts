@@ -14,7 +14,20 @@
  * limitations under the License.
  */
 
-package com.ritense.valtimoplugins.freemarker.model
+import {ChangeDetectionStrategy, Component, EventEmitter, Input, Output} from '@angular/core';
+import {Observable} from 'rxjs';
 
-val TEMPLATE_TYPE_MAIL = "mail"
-val TEMPLATE_TYPE_TEXT = "text"
+@Component({
+  selector: 'valtimo-text-template-delete-modal',
+  templateUrl: './text-template-delete-modal.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class TextTemplateDeleteModalComponent {
+  @Input() deleteRowKeys: Array<string>;
+  @Input() showDeleteModal$: Observable<boolean>;
+  @Output() deleteEvent = new EventEmitter<Array<string>>();
+
+  public onDelete(templates: Array<string>): void {
+    this.deleteEvent.emit(templates);
+  }
+}

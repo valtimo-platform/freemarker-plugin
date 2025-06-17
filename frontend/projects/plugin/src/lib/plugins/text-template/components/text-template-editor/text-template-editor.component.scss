@@ -1,4 +1,4 @@
-/*
+/*!
  * Copyright 2015-2023 Ritense BV, the Netherlands.
  *
  * Licensed under EUPL, Version 1.2 (the "License");
@@ -14,7 +14,22 @@
  * limitations under the License.
  */
 
-package com.ritense.valtimoplugins.freemarker.model
+.loading-container {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
 
-val TEMPLATE_TYPE_MAIL = "mail"
-val TEMPLATE_TYPE_TEXT = "text"
+.overflow-button {
+  margin-right: 16px;
+}
+
+.buttons-container {
+  display: flex;
+  flex-direction: row;
+}
+
+.template-explanation {
+  margin-top: 16px;
+  margin-bottom: 24px;
+}
