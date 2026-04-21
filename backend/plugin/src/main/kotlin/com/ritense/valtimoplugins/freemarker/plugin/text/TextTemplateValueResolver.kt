@@ -16,9 +16,10 @@
 
 package com.ritense.valtimoplugins.freemarker.plugin.text
 
+import com.ritense.valtimo.contract.case_.CaseDefinitionId
 import com.ritense.document.domain.Document
 import com.ritense.document.service.DocumentService
-import com.ritense.processdocument.domain.impl.CamundaProcessInstanceId
+import com.ritense.processdocument.domain.impl.OperatonProcessInstanceId
 import com.ritense.processdocument.service.ProcessDocumentService
 import com.ritense.valtimo.contract.annotation.SkipComponentScan
 import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_TEXT
@@ -28,7 +29,7 @@ import com.ritense.valueresolver.ValueResolverOption
 import com.ritense.valueresolver.exception.ValueResolverValidationException
 import java.util.UUID
 import java.util.function.Function
-import org.camunda.bpm.engine.delegate.VariableScope
+import org.operaton.bpm.engine.delegate.VariableScope
 import org.springframework.stereotype.Component
 
 @Component
@@ -47,7 +48,7 @@ class TextTemplateValueResolver(
     }
 
     override fun createResolver(processInstanceId: String, variableScope: VariableScope): Function<String, Any?> {
-        val document = processDocumentService.getDocument(CamundaProcessInstanceId(processInstanceId), variableScope)
+        val document = processDocumentService.getDocument(OperatonProcessInstanceId(processInstanceId), variableScope)
         return createResolver(document, variableScope.variables)
     }
 
@@ -76,13 +77,9 @@ class TextTemplateValueResolver(
         throw UnsupportedOperationException("Can not to save values in template. ${values.keys}")
     }
 
-    override fun getResolvableKeyOptions(documentDefinitionName: String, version: Long): List<ValueResolverOption> {
-        return getResolvableKeyOptions(documentDefinitionName)
-    }
-
-    override fun getResolvableKeyOptions(documentDefinitionName: String): List<ValueResolverOption> {
+    override fun getResolvableKeyOptions(caseDefinitionId: CaseDefinitionId): List<ValueResolverOption> {
         val templateKeys = templateService.findTemplates(
-            caseDefinitionName = documentDefinitionName,
+            caseDefinitionName = caseDefinitionId.key,
             templateType = TEMPLATE_TYPE_TEXT,
         ).map { it.key }
         return createFieldList(templateKeys)
