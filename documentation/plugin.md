@@ -1,71 +1,70 @@
-# Plugin Documentation
+# Freemarker library
 
-<!-- Use this page to document your plugin. Below is a suggested structure. -->
+Contains two plugins which both use Freemarker.
 
-## Overview
+## Mail Template Plugin
 
-This is a sample plugin demonstrating an API call action. It fetches data from a time API endpoint.
+For creating HTML mail templates with Freemarker.
 
-## Dependencies
+## Text Template Plugin
 
-### Backend
+For creating text templates with Freemarker. These text templates can be used in a value-resolver. For example:
+`template:my-template`.
+
+https://github.com/user-attachments/assets/3b27631d-bbda-406e-b6b7-f6e5be21f9b9
+
+# Dependencies
+
+In order to use the plugins, the module needs to be added as a dependency. The
+following can be added to your project, depending on whether Maven or Gradle is used:
+
+## Backend
+
+The following Gradle dependency can be added to your `build.gradle` file:
 
 ```kotlin
 dependencies {
-    implementation("com.ritense.valtimoplugins:sample-plugin:0.0.1")
+    implementation("com.ritense.valtimoplugins:freemarker:6.0.1")
 }
 ```
 
-### Frontend
+The most recent version can be found [here](https://mvnrepository.com/artifact/com.ritense.valtimoplugins/freemarker).
+
+## Frontend
+
+The following dependency can be added to your `package.json` file:
 
 ```json
 {
   "dependencies": {
-    "@valtimo-plugins/sample-plugin": "0.0.1"
+    "@valtimo-plugins/freemarker": "6.0.0"
   }
 }
 ```
 
-In your `app.module.ts`:
+The most recent version can be found [here](https://www.npmjs.com/package/@valtimo-plugins/freemarker?activeTab=versions).
+
+In order to use the plugins in the frontend, the following must be added to your `app.module.ts`:
 
 ```typescript
 import {
-    SamplePluginModule, samplePluginSpecification,
-} from '@valtimo-plugins/sample-plugin';
+    MailTemplatePluginModule, mailTemplatePluginSpecification, // remove this line if you don't need the mail-template plugin
+    TextTemplatePluginModule, textTemplatePluginSpecification // remove this line if you don't need the text-template plugin
+} from '@valtimo-plugins/freemarker';
 
 @NgModule({
     imports: [
-        SamplePluginModule,
+        MailTemplatePluginModule,
+        TextTemplatePluginModule,
     ],
     providers: [
         {
             provide: PLUGIN_TOKEN,
             useValue: [
-                samplePluginSpecification,
+                mailTemplatePluginSpecification,
+                textTemplatePluginSpecification,
             ]
         }
     ]
 })
 ```
-
-## Configuration
-
-List the plugin configuration properties and how to set them.
-
-| Property | Type   | Required | Description                          |
-|----------|--------|----------|--------------------------------------|
-| apiUrl   | string | Yes      | The URL of the time API to call      |
-
-## Actions
-
-### Time API test action
-
-Sends a GET request to the configured API URL and returns the timezone response.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-|           |      |          |             |
-
-## Usage
-
-Explain how to use the plugin in a process, with examples if applicable.
