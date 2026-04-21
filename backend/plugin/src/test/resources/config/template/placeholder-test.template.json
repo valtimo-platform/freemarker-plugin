@@ -1,0 +1,5 @@
+{
+  "templateKey": "placeholder-test-template",
+  "templateType": "mail",
+  "contentRef": "/config/template/placeholder-test.ftlh"
+}
