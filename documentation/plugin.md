@@ -2,11 +2,11 @@
 
 Contains two plugins which both use Freemarker.
 
-## Mail Template Plugin
+## Mail Freemarker Plugin
 
 For creating HTML mail templates with Freemarker.
 
-## Text Template Plugin
+## Text Freemarker Plugin
 
 For creating text templates with Freemarker. These text templates can be used in a value-resolver. For example:
 `template:my-template`.
@@ -48,8 +48,8 @@ In order to use the plugins in the frontend, the following must be added to your
 
 ```typescript
 import {
-    MailTemplatePluginModule, mailTemplatePluginSpecification, // remove this line if you don't need the mail-template plugin
-    TextTemplatePluginModule, textTemplatePluginSpecification // remove this line if you don't need the text-template plugin
+    MailTemplatePluginModule, mailTemplatePluginSpecification, // remove this line if you don't need the mail-Freemarker Plugin
+    TextTemplatePluginModule, textTemplatePluginSpecification // remove this line if you don't need the text-Freemarker Plugin
 } from '@valtimo-plugins/freemarker';
 
 @NgModule({
