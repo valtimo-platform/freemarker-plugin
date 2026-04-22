@@ -17,6 +17,7 @@
 val freemarkerVersion: String by project
 val kotlinLoggingVersion: String by project
 val mockitoKotlinVersion: String by project
+val valtimoVersion: String by project
 
 dockerCompose {
     setProjectName("freemarker")
@@ -46,8 +47,21 @@ dependencies {
     compileOnly("io.github.oshai:kotlin-logging-jvm:$kotlinLoggingVersion")
 
     // Testing
+    testImplementation("com.ritense.valtimo:building-block:$valtimoVersion")
+    testImplementation("com.ritense.valtimo:core")
+    testImplementation("com.ritense.valtimo:case")
+    testImplementation("com.ritense.valtimo:exporter")
+    testImplementation("com.ritense.valtimo:importer")
+    testImplementation("com.ritense.valtimo:plugin-valtimo")
+    testImplementation("com.ritense.valtimo:process-document")
+    testImplementation("com.ritense.valtimo:temporary-resource-storage")
+    testImplementation("com.ritense.valtimo:value-resolver")
     testImplementation("com.ritense.valtimo:local-resource")
     testImplementation("com.ritense.valtimo:test-utils-common")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-web")
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    testImplementation("org.springframework.boot:spring-boot-starter-security")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 

@@ -18,16 +18,15 @@ package com.ritense.valtimoplugins.freemarker.repository
 
 import com.ritense.document.domain.Document
 import com.ritense.document.domain.impl.JsonSchemaDocument
-import java.util.stream.Stream
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import java.util.stream.Stream
 
 interface JsonSchemaDocumentRepositoryStreaming : JpaRepository<JsonSchemaDocument, Document.Id> {
-
     @Query(
         """SELECT d
         FROM JsonSchemaDocument d
-        WHERE d.documentDefinitionId.blueprintId.blueprintKey = :blueprintKey"""
+        WHERE d.documentDefinitionId.blueprintId.blueprintKey = :blueprintKey""",
     )
     fun streamAllByBluePrintKey(blueprintKey: String): Stream<JsonSchemaDocument>
 }

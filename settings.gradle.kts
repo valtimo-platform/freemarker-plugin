@@ -1,4 +1,4 @@
-rootProject.name = "valtimo-plugin-template"
+rootProject.name = "freemarker-plugin"
 include(
     "backend",
     "backend:app",

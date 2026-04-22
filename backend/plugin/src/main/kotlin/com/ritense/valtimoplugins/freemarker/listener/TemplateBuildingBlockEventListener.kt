@@ -38,9 +38,8 @@ class TemplateBuildingBlockEventListener(
     fun handleBuildingBlockDefinitionCreatedEvent(event: BuildingBlockDefinitionCreatedEvent) {
         if (event.duplicate) {
             service
-                .findTemplates(
-                    buildingBlockDefinitionId = event.basedOnBuildingBlockDefinitionId!!,
-                ).forEach { oldTemplate ->
+                .findTemplates(buildingBlockDefinitionId = event.basedOnBuildingBlockDefinitionId!!)
+                .forEach { oldTemplate ->
                     repository.save(
                         ValtimoTemplate(
                             key = oldTemplate.key,

@@ -23,7 +23,6 @@ import com.ritense.valtimoplugins.freemarker.model.MissingPlaceholderStrategy.SH
 import com.ritense.valtimoplugins.freemarker.plugin.documentgenerator.DocumentGeneratorPlugin
 import com.ritense.valtimoplugins.freemarker.plugin.web.rest.dto.TemplatePreviewRequest
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
-import java.net.URLConnection
 import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_OCTET_STREAM
 import org.springframework.http.MediaType.APPLICATION_PDF
@@ -33,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
+import java.net.URLConnection
 
 @RestController
 @SkipComponentScan
@@ -41,38 +41,41 @@ class DocumentGeneratorResource(
     private val templateService: TemplateService,
     private val pluginService: PluginService,
 ) {
-
     @PostMapping("/v1/template/preview")
     fun getTemplatePreview(
         @RequestBody request: TemplatePreviewRequest,
     ): ResponseEntity<StreamingResponseBody> {
+        val documentGeneratorPlugin =
+            pluginService.createInstance(DocumentGeneratorPlugin::class.java) { true }
+                ?: throw RuntimeException("ERROR: Missing plugin configuration: 'Document generator'.")
 
-        val documentGeneratorPlugin = pluginService.createInstance(DocumentGeneratorPlugin::class.java) { true }
-            ?: throw RuntimeException("ERROR: Missing plugin configuration: 'Document generator'.")
+        val preview =
+            templateService.generate(
+                templateName = request.fileName,
+                templateContent = request.content,
+                missingPlaceholderStrategy = SHOW_MISSING_PLACEHOLDER,
+            )
 
-        val preview = templateService.generate(
-            templateName = request.fileName,
-            templateContent = request.content,
-            missingPlaceholderStrategy = SHOW_MISSING_PLACEHOLDER
-        )
-
-        val fileMediaType = try {
-            MediaType.valueOf(URLConnection.guessContentTypeFromName(request.fileName))
-        } catch (ignore: RuntimeException) {
-            APPLICATION_OCTET_STREAM
-        }
-
-        val stream = StreamingResponseBody { out ->
-            if (fileMediaType == APPLICATION_PDF) {
-                documentGeneratorPlugin.generatePdf(preview, out)
-            } else if (fileMediaType.subtype == "csv") {
-                documentGeneratorPlugin.generateCsv(preview, out)
-            } else {
-                out.use { it.write(preview.toByteArray()) }
+        val fileMediaType =
+            try {
+                MediaType.valueOf(URLConnection.guessContentTypeFromName(request.fileName))
+            } catch (ignore: RuntimeException) {
+                APPLICATION_OCTET_STREAM
             }
-        }
 
-        return ResponseEntity.ok()
+        val stream =
+            StreamingResponseBody { out ->
+                if (fileMediaType == APPLICATION_PDF) {
+                    documentGeneratorPlugin.generatePdf(preview, out)
+                } else if (fileMediaType.subtype == "csv") {
+                    documentGeneratorPlugin.generateCsv(preview, out)
+                } else {
+                    out.use { it.write(preview.toByteArray()) }
+                }
+            }
+
+        return ResponseEntity
+            .ok()
             .header("Content-Disposition", "attachment;filename=${request.fileName}")
             .contentType(fileMediaType)
             .body(stream)

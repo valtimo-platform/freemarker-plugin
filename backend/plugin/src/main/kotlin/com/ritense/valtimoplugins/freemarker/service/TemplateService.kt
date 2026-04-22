@@ -19,27 +19,39 @@ package com.ritense.valtimoplugins.freemarker.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.ritense.document.domain.Document
+import com.ritense.document.domain.impl.JsonSchemaDocument
 import com.ritense.valtimo.contract.annotation.SkipComponentScan
+import com.ritense.valtimo.contract.buildingblock.BuildingBlockDefinitionChecker
+import com.ritense.valtimo.contract.buildingblock.BuildingBlockDefinitionId
+import com.ritense.valtimo.contract.case_.CaseDefinitionChecker
+import com.ritense.valtimo.contract.case_.CaseDefinitionId
 import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
+import com.ritense.valtimoplugins.freemarker.model.MissingPlaceholderStrategy
+import com.ritense.valtimoplugins.freemarker.model.MissingPlaceholderStrategy.REPLACE_MISSING_PLACEHOLDER_WITH_EMPTY_VALUE
+import com.ritense.valtimoplugins.freemarker.model.MissingPlaceholderStrategy.SHOW_MISSING_PLACEHOLDER
+import com.ritense.valtimoplugins.freemarker.model.MissingPlaceholderStrategy.THROW_ERROR_WHEN_MISSING_PLACEHOLDER
+import com.ritense.valtimoplugins.freemarker.repository.JsonSchemaDocumentRepositoryStreaming
 import com.ritense.valtimoplugins.freemarker.repository.TemplateRepository
-import com.ritense.valtimoplugins.freemarker.repository.ValtimoTemplateSpecificationHelper.Companion.byCaseDefinitionName
+import com.ritense.valtimoplugins.freemarker.repository.ValtimoTemplateSpecificationHelper.Companion.byBuildingBlockDefinitionId
+import com.ritense.valtimoplugins.freemarker.repository.ValtimoTemplateSpecificationHelper.Companion.byCaseDefinitionId
 import com.ritense.valtimoplugins.freemarker.repository.ValtimoTemplateSpecificationHelper.Companion.byKey
-import com.ritense.valtimoplugins.freemarker.repository.ValtimoTemplateSpecificationHelper.Companion.byKeyAndCaseDefinitionNameAndType
 import com.ritense.valtimoplugins.freemarker.repository.ValtimoTemplateSpecificationHelper.Companion.byType
+import com.ritense.valtimoplugins.freemarker.repository.ValtimoTemplateSpecificationHelper.Companion.byTypes
 import com.ritense.valtimoplugins.freemarker.repository.ValtimoTemplateSpecificationHelper.Companion.query
+import com.ritense.valtimoplugins.freemarker.web.rest.dto.TemplateKeyType
 import com.ritense.valueresolver.ValueResolverService
 import freemarker.template.Configuration
 import freemarker.template.Template
 import freemarker.template.TemplateException
-import java.io.StringWriter
-import java.util.Stack
-import java.util.UUID
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.io.StringWriter
+import java.util.UUID
+import java.util.stream.Stream
 import kotlin.random.Random
 
 @Service
@@ -50,266 +62,440 @@ class TemplateService(
     private val objectMapper: ObjectMapper,
     private val valueResolverService: ValueResolverService,
     private val freemarkerConfiguration: Configuration,
+    private val caseDefinitionChecker: CaseDefinitionChecker,
+    private val buildingBlockDefinitionChecker: BuildingBlockDefinitionChecker,
+    private val jsonSchemaDocumentRepositoryStreaming: JsonSchemaDocumentRepositoryStreaming,
 ) {
-
     fun generate(
         templateKey: String,
-        caseDefinitionName: String,
         templateType: String,
         document: Document,
-    ): String = generate(
-        templateKey = templateKey,
-        caseDefinitionName = caseDefinitionName,
-        templateType = templateType,
-        document = document
-    )
+    ): String =
+        generate(
+            templateKey = templateKey,
+            templateType = templateType,
+            document = document,
+        )
 
     fun generate(
         templateKey: String,
-        caseDefinitionName: String,
         templateType: String,
         document: Document,
         processVariables: Map<String, Any?> = emptyMap(),
-        strict: Boolean = true,
+        missingPlaceholderStrategy: MissingPlaceholderStrategy = THROW_ERROR_WHEN_MISSING_PLACEHOLDER,
     ): String {
-        val template = getTemplate(templateKey, document.definitionId().name(), templateType)
-        return generate(template, document, processVariables, strict)
+        val template =
+            getTemplate(
+                templateKey = templateKey,
+                caseDefinitionId = document.definitionId().caseDefinitionId(),
+                buildingBlockDefinitionId = document.definitionId().buildingBlockDefinitionId(),
+                templateType = templateType,
+            )
+        return generate(template, document, processVariables, missingPlaceholderStrategy)
     }
 
-    fun generate(template: ValtimoTemplate, document: Document) = generate(template, document, emptyMap())
+    fun generate(
+        template: ValtimoTemplate,
+        document: Document,
+    ) = generate(template, document, emptyMap())
 
     fun generate(
         valtimoTemplate: ValtimoTemplate,
         document: Document,
         processVariables: Map<String, Any?>,
-        strict: Boolean = true,
-    ): String {
-        val dataModel = mutableMapOf<String, Any?>(
-            "doc" to objectMapper.convertValue<Map<String, Any?>>(document.content().asJson()),
-            "pv" to processVariables
+        missingPlaceholderStrategy: MissingPlaceholderStrategy = THROW_ERROR_WHEN_MISSING_PLACEHOLDER,
+    ): String =
+        generate(
+            templateName = valtimoTemplate.toString(),
+            templateContent = valtimoTemplate.content,
+            document = document,
+            processVariables = processVariables,
+            missingPlaceholderStrategy = missingPlaceholderStrategy,
         )
 
-        val template = Template(UUID.randomUUID().toString(), valtimoTemplate.content, freemarkerConfiguration)
-        var exceptionCaught: Exception? = null
-
-        for (i in 1..10) {
-            try {
-                val writer = StringWriter()
-                template.createProcessingEnvironment(dataModel, writer).process()
-                return writer.toString()
-            } catch (e: TemplateException) {
-                if (!resolveDataModel(document, valtimoTemplate, dataModel, strict)) {
-                    throw e
-                }
-                exceptionCaught = e
+    fun generate(
+        templateName: String,
+        templateContent: String,
+        processVariables: Map<String, Any?> = emptyMap(),
+        document: Document? = null,
+        missingPlaceholderStrategy: MissingPlaceholderStrategy = THROW_ERROR_WHEN_MISSING_PLACEHOLDER,
+    ): String {
+        streamDocuments(
+            (document as JsonSchemaDocument?)?.definitionId()?.blueprintId()?.blueprintKey,
+        ).use { documentsStream ->
+            val dataModel = mutableMapOf<String, Any?>()
+            document?.let {
+                dataModel["doc"] = objectMapper.convertValue<Map<String, Any?>>(document.content().asJson())
             }
+            document?.let { dataModel["docs"] = streamToMap(documentsStream) }
+            dataModel["pv"] = processVariables
+
+            val template = Template(UUID.randomUUID().toString(), templateContent, freemarkerConfiguration)
+            var exceptionCaught: Exception? = null
+
+            for (i in 1..10) {
+                try {
+                    val writer = StringWriter()
+                    template.createProcessingEnvironment(dataModel, writer).process()
+                    return writer.toString()
+                } catch (e: TemplateException) {
+                    if (!resolveDataModel(
+                            document = document,
+                            templateName = templateName,
+                            templateContent = templateContent,
+                            incompleteDataModel = dataModel,
+                            missingPlaceholderStrategy = missingPlaceholderStrategy,
+                        )
+                    ) {
+                        throw e
+                    }
+                    exceptionCaught = e
+                }
+            }
+            throw exceptionCaught!!
         }
-        throw exceptionCaught!!
     }
 
     fun findPlaceholders(
-        template: ValtimoTemplate,
-        incompleteDataModel: Map<String, Any?> = mutableMapOf()
-    ): List<String> {
+        templateContent: String,
+        incompleteDataModel: Map<String, Any?> = mutableMapOf(),
+    ): Map<String, Any> {
         // Might not find placeholders that are hidden behind a freemarker-condition
-        val completeDataModel = findCompleteDataModelWithDummyData(template, incompleteDataModel)
-        return getPlaceholdersFromDataModel(completeDataModel)
+        val completeDataModel = findCompleteDataModelWithDummyData(templateContent, incompleteDataModel)
+        return extractPlaceholders(completeDataModel)
     }
 
     fun findTemplates(
         templateKey: String? = null,
-        caseDefinitionName: String? = null,
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
         templateType: String? = null,
+        templateTypes: List<String>? = null,
         pageable: Pageable,
     ): Page<ValtimoTemplate> {
-        val query = buildSpecification(templateKey, caseDefinitionName, templateType)
+        val query =
+            buildSpecification(
+                templateKey = templateKey,
+                caseDefinitionId = caseDefinitionId,
+                buildingBlockDefinitionId = buildingBlockDefinitionId,
+                templateType = templateType,
+                templateTypes = templateTypes,
+            )
         return templateRepository.findAll(query, pageable)
     }
 
     fun findTemplates(
         templateKey: String? = null,
-        caseDefinitionName: String? = null,
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
         templateType: String? = null,
+        templateTypes: List<String>? = null,
     ): List<ValtimoTemplate> {
-        val query = buildSpecification(templateKey, caseDefinitionName, templateType)
+        val query =
+            buildSpecification(
+                templateKey = templateKey,
+                caseDefinitionId = caseDefinitionId,
+                buildingBlockDefinitionId = buildingBlockDefinitionId,
+                templateType = templateType,
+                templateTypes = templateTypes,
+            )
         return templateRepository.findAll(query)
     }
 
     fun findTemplate(
         templateKey: String,
-        caseDefinitionName: String?,
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
         templateType: String,
-    ): ValtimoTemplate? {
-        return templateRepository.findOne(
-            byKeyAndCaseDefinitionNameAndType(templateKey, caseDefinitionName, templateType)
-        ).orElse(null)
-    }
+    ): ValtimoTemplate? =
+        templateRepository
+            .findOne(
+                byKey(templateKey)
+                    .and(byCaseDefinitionId(caseDefinitionId))
+                    .and(byBuildingBlockDefinitionId(buildingBlockDefinitionId))
+                    .and(byType(templateType)),
+            ).orElse(null)
 
     fun getTemplate(
         templateKey: String,
-        caseDefinitionName: String?,
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
         templateType: String,
-    ): ValtimoTemplate {
-        return findTemplate(templateKey, caseDefinitionName, templateType)
-            ?: throw IllegalStateException("No Template found for '$templateType/$caseDefinitionName/$templateKey'")
-    }
+    ): ValtimoTemplate =
+        findTemplate(templateKey, caseDefinitionId, buildingBlockDefinitionId, templateType)
+            ?: throw IllegalStateException("No Template found for '$templateType/$caseDefinitionId/$templateKey'")
 
     fun saveTemplate(
         templateKey: String,
-        caseDefinitionName: String?,
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
         templateType: String,
         metadata: Map<String, Any?>,
         content: String,
     ): ValtimoTemplate {
-        val existingTemplate = findTemplate(templateKey, caseDefinitionName, templateType)
+        if (caseDefinitionId != null) {
+            caseDefinitionChecker.assertCanUpdateCaseDefinition(caseDefinitionId)
+        } else if (buildingBlockDefinitionId != null) {
+            buildingBlockDefinitionChecker.assertCanUpdateBuildingBlockDefinition(buildingBlockDefinitionId)
+        } else {
+            caseDefinitionChecker.assertCanUpdateGlobalConfiguration()
+        }
+        val existingTemplate = findTemplate(templateKey, caseDefinitionId, buildingBlockDefinitionId, templateType)
         return templateRepository.save(
             ValtimoTemplate(
                 id = existingTemplate?.id ?: UUID.randomUUID(),
                 key = templateKey,
-                caseDefinitionName = caseDefinitionName,
+                caseDefinitionId = caseDefinitionId,
+                buildingBlockDefinitionId = buildingBlockDefinitionId,
                 type = templateType,
                 metadata = metadata,
                 content = content,
-            )
+            ),
         )
     }
 
     fun createTemplate(
         templateKey: String,
-        caseDefinitionName: String?,
+        caseDefinitionId: CaseDefinitionId?,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId?,
         templateType: String,
         metadata: Map<String, Any?>,
     ): ValtimoTemplate {
+        if (caseDefinitionId != null) {
+            caseDefinitionChecker.assertCanUpdateCaseDefinition(caseDefinitionId)
+        } else if (buildingBlockDefinitionId != null) {
+            buildingBlockDefinitionChecker.assertCanUpdateBuildingBlockDefinition(buildingBlockDefinitionId)
+        } else {
+            caseDefinitionChecker.assertCanUpdateGlobalConfiguration()
+        }
         require(
             !templateRepository.exists(
-                byKeyAndCaseDefinitionNameAndType(templateKey, caseDefinitionName, templateType)
-            )
+                byKey(templateKey)
+                    .and(byCaseDefinitionId(caseDefinitionId))
+                    .and(byBuildingBlockDefinitionId(buildingBlockDefinitionId))
+                    .and(byType(templateType)),
+            ),
         ) { "Template '$templateKey' already exists" }
         return templateRepository.save(
             ValtimoTemplate(
                 key = templateKey,
-                caseDefinitionName = caseDefinitionName,
+                caseDefinitionId = caseDefinitionId,
+                buildingBlockDefinitionId = buildingBlockDefinitionId,
                 type = templateType,
                 metadata = metadata,
-            )
+                content = defaultTemplateContent(templateType),
+            ),
         )
     }
 
     fun deleteTemplates(
-        caseDefinitionName: String?,
-        templateType: String,
-        templateKeys: List<String>
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
+        templates: List<TemplateKeyType>,
     ) {
-        templateKeys.forEach { key ->
-            deleteTemplate(key, caseDefinitionName, templateType)
+        if (caseDefinitionId != null) {
+            caseDefinitionChecker.assertCanUpdateCaseDefinition(caseDefinitionId)
+        } else if (buildingBlockDefinitionId != null) {
+            buildingBlockDefinitionChecker.assertCanUpdateBuildingBlockDefinition(buildingBlockDefinitionId)
+        } else {
+            caseDefinitionChecker.assertCanUpdateGlobalConfiguration()
+        }
+        templates.forEach { template ->
+            deleteTemplate(template.key, caseDefinitionId, buildingBlockDefinitionId, template.type)
         }
     }
 
     fun deleteTemplate(
         templateKey: String,
-        caseDefinitionName: String?,
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
         templateType: String,
     ) {
-        templateRepository.delete(byKeyAndCaseDefinitionNameAndType(templateKey, caseDefinitionName, templateType))
+        if (caseDefinitionId != null) {
+            caseDefinitionChecker.assertCanUpdateCaseDefinition(caseDefinitionId)
+        } else if (buildingBlockDefinitionId != null) {
+            buildingBlockDefinitionChecker.assertCanUpdateBuildingBlockDefinition(buildingBlockDefinitionId)
+        } else {
+            caseDefinitionChecker.assertCanUpdateGlobalConfiguration()
+        }
+        templateRepository.delete(
+            byKey(templateKey)
+                .and(byCaseDefinitionId(caseDefinitionId))
+                .and(byBuildingBlockDefinitionId(buildingBlockDefinitionId))
+                .and(byType(templateType)),
+        )
+    }
+
+    fun deleteTemplatesByCaseDefinitionId(
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
+    ) {
+        if (caseDefinitionId != null) {
+            caseDefinitionChecker.assertCanUpdateCaseDefinition(caseDefinitionId)
+        } else if (buildingBlockDefinitionId != null) {
+            buildingBlockDefinitionChecker.assertCanUpdateBuildingBlockDefinition(buildingBlockDefinitionId)
+        } else {
+            caseDefinitionChecker.assertCanUpdateGlobalConfiguration()
+        }
+        templateRepository.delete(
+            byCaseDefinitionId(caseDefinitionId).and(byBuildingBlockDefinitionId(buildingBlockDefinitionId)),
+        )
     }
 
     private fun buildSpecification(
         templateKey: String? = null,
-        caseDefinitionName: String? = null,
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
         templateType: String? = null,
+        templateTypes: List<String>? = null,
     ): Specification<ValtimoTemplate> {
         var query = query()
         if (!templateKey.isNullOrEmpty()) {
             query = query.and(byKey(templateKey))
         }
-        if (caseDefinitionName?.isNotEmpty() == true) {
-            query = query.and(byCaseDefinitionName(caseDefinitionName))
+        if (caseDefinitionId != null) {
+            query = query.and(byCaseDefinitionId(caseDefinitionId))
+        }
+        if (buildingBlockDefinitionId != null) {
+            query = query.and(byBuildingBlockDefinitionId(buildingBlockDefinitionId))
         }
         if (!templateType.isNullOrEmpty()) {
             query = query.and(byType(templateType))
+        }
+        if (templateTypes != null) {
+            query = query.and(byTypes(templateTypes))
         }
         return query
     }
 
     private fun resolveDataModel(
-        document: Document,
-        template: ValtimoTemplate,
-        incompleteDataModel: MutableMap<String, Any?>,
-        strict: Boolean = true
+        templateName: String,
+        templateContent: String,
+        document: Document? = null,
+        incompleteDataModel: MutableMap<String, Any?> = mutableMapOf(),
+        missingPlaceholderStrategy: MissingPlaceholderStrategy = THROW_ERROR_WHEN_MISSING_PLACEHOLDER,
     ): Boolean {
-        val resolvedPlaceholders = getPlaceholdersFromDataModel(incompleteDataModel)
-        val newPlaceholders = findPlaceholders(template, incompleteDataModel)
-            .filter { !resolvedPlaceholders.contains(it) }
-        valueResolverService.resolveValues(document.id().toString(), newPlaceholders).forEach { (placeholder, value) ->
-            if (value != null && placeholder != value) {
-                putPlaceholder(placeholder, value, incompleteDataModel)
-            } else if (!strict) {
-                logger.warn { "Unresolved placeholder '$placeholder'. Template: '$template', document: '${document.id()}'" }
-                putPlaceholder(placeholder, "", incompleteDataModel)
+        val resolvedPlaceholders = extractPlaceholders(incompleteDataModel)
+        val newPlaceholders =
+            findPlaceholders(templateContent, incompleteDataModel)
+                .filter { !resolvedPlaceholders.keys.contains(it.key) }
+        val resolvedValues =
+            if (document == null) {
+                newPlaceholders
             } else {
-                error("Failed to resolve '$placeholder' for template: '$template'")
+                try {
+                    valueResolverService.resolveValues(document.id().toString(), newPlaceholders.keys)
+                } catch (ignore: Exception) {
+                    newPlaceholders.keys.associate { newPlaceholder ->
+                        try {
+                            newPlaceholder to
+                                valueResolverService.resolveValues(
+                                    document.id().toString(),
+                                    listOf(newPlaceholder),
+                                )[newPlaceholder]
+                        } catch (ignore: Exception) {
+                            newPlaceholder to null
+                        }
+                    }
+                }
+            }
+        resolvedValues.forEach { (placeholder, value) ->
+            if (placeholder == value || value == null) {
+                val dummyValue = newPlaceholders[placeholder]!!
+                val newValue =
+                    when (missingPlaceholderStrategy) {
+                        SHOW_MISSING_PLACEHOLDER -> dummyValue
+                        THROW_ERROR_WHEN_MISSING_PLACEHOLDER ->
+                            error(
+                                "Failed to resolve '$placeholder' for template: '$templateName'",
+                            )
+                        REPLACE_MISSING_PLACEHOLDER_WITH_EMPTY_VALUE -> if (dummyValue is String) "" else dummyValue
+                    }
+                logger.warn { "Unresolved placeholder '$placeholder'. Template: '$templateName'" }
+                putPlaceholder(placeholder, newValue, incompleteDataModel)
+            } else {
+                putPlaceholder(placeholder, value, incompleteDataModel)
             }
         }
         return newPlaceholders.isNotEmpty()
     }
 
-    private fun getPlaceholdersFromDataModel(
-        dataModel: Map<String, Any?>,
-        stack: Stack<Any> = Stack(),
-        placeholders: MutableList<String> = mutableListOf()
-    ): List<String> {
-        dataModel.forEach { (key, value) ->
-            getPlaceholdersFromDataModel(key, value, stack, placeholders)
-        }
-        if (dataModel.isEmpty()) {
-            placeholders.add(stack.joinToString(".").replaceFirst('.', ':'))
-        }
-        return placeholders
-    }
-
-    private fun getPlaceholdersFromDataModel(
-        dataModel: List<Any?>,
-        stack: Stack<Any> = Stack(),
-        placeholders: MutableList<String> = mutableListOf()
-    ): List<String> {
-        dataModel.forEachIndexed { index, value ->
-            getPlaceholdersFromDataModel("[$index]", value, stack, placeholders)
-        }
-        if (dataModel.isEmpty()) {
-            placeholders.add(stack.joinToString(".").replaceFirst('.', ':'))
-        }
-        return placeholders
-    }
-
-    private fun getPlaceholdersFromDataModel(
-        key: String,
+    private fun extractPlaceholders(
         value: Any?,
-        stack: Stack<Any> = Stack(),
-        placeholders: MutableList<String> = mutableListOf()
-    ) {
-        stack.push(key)
+        path: MutableList<String> = mutableListOf(),
+        placeholders: MutableMap<String, Any> = mutableMapOf(),
+    ): Map<String, Any> {
         when (value) {
-            is Map<*, *> -> getPlaceholdersFromDataModel(value as Map<String, Any?>, stack, placeholders)
-            is List<*> -> getPlaceholdersFromDataModel(value as List<Any?>, stack, placeholders)
-            else -> placeholders.add(stack.joinToString(".").replaceFirst('.', ':'))
+            is Map<*, *> -> {
+                if (value.isEmpty()) {
+                    placeholders.put(
+                        path.joinToString(".").replaceFirst('.', ':'),
+                        value,
+                    )
+                } else {
+                    value.forEach { (key, v) ->
+                        require(key is String)
+                        path.add(key)
+                        extractPlaceholders(v, path, placeholders)
+                        path.removeLast()
+                    }
+                }
+            }
+
+            is List<*> -> {
+                if (value.isEmpty()) {
+                    placeholders.put(
+                        path.joinToString(".").replaceFirst('.', ':'),
+                        value,
+                    )
+                } else {
+                    value.forEachIndexed { index, item ->
+                        path.add("[$index]")
+                        extractPlaceholders(item, path, placeholders)
+                        path.removeLast()
+                    }
+                }
+            }
+
+            null -> {
+                placeholders.put(
+                    path.joinToString(".").replaceFirst('.', ':'),
+                    Any::class,
+                )
+            }
+
+            else -> {
+                placeholders.put(
+                    path.joinToString(".").replaceFirst('.', ':'),
+                    value,
+                )
+            }
         }
-        stack.pop()
+        return placeholders
     }
 
     private fun findCompleteDataModelWithDummyData(
-        valtimoTemplate: ValtimoTemplate,
-        incompleteDataModel: Map<String, Any?> = mutableMapOf()
+        templateContent: String,
+        incompleteDataModel: Map<String, Any?> = mutableMapOf(),
     ): Map<String, Any?> {
         val dataModel = incompleteDataModel.toMutableMap()
-        val template = Template(UUID.randomUUID().toString(), valtimoTemplate.content, freemarkerConfiguration)
+        val template = Template(UUID.randomUUID().toString(), templateContent, freemarkerConfiguration)
+        var prevPlaceholder: String? = null
+        var dummyValueIndex = 0
         for (i in 1..100) {
             try {
                 val writer = StringWriter()
                 template.createProcessingEnvironment(dataModel, writer).process()
                 break
             } catch (e: TemplateException) {
-                val missingPlaceholder = e.blamedExpressionString ?: throw e
-                putPlaceholder(missingPlaceholder, getRandomDummyValue(), dataModel)
+                val missingPlaceholder = e.blamedExpressionString?.substringBefore(' ') ?: prevPlaceholder
+                if (missingPlaceholder == null || !e.ftlInstructionStack.contains(missingPlaceholder)) {
+                    throw e
+                }
+                if (prevPlaceholder == missingPlaceholder) dummyValueIndex++ else dummyValueIndex = 0
+                val dummyValue = getDummyValue("\${$missingPlaceholder}", dummyValueIndex)
+                putPlaceholder(missingPlaceholder, dummyValue, dataModel)
+                prevPlaceholder = missingPlaceholder
             }
         }
         return dataModel
@@ -318,7 +504,7 @@ class TemplateService(
     private fun putPlaceholder(
         placeholder: String,
         value: Any?,
-        dataModel: MutableMap<String, Any?>
+        dataModel: MutableMap<String, Any?>,
     ) {
         var node = dataModel
         val parts = placeholder.split('.', ':')
@@ -327,25 +513,105 @@ class TemplateService(
                 node[part] = value
             } else {
                 val v = node[part]
-                val n = if (v is Map<*, *>) {
-                    v.toMutableMap() as MutableMap<String, Any?>
-                } else {
-                    mutableMapOf()
-                }
+                val n =
+                    if (v is Map<*, *>) {
+                        v.toMutableMap() as MutableMap<String, Any?>
+                    } else {
+                        mutableMapOf()
+                    }
                 node[part] = n
                 node = n
             }
         }
     }
 
-    private fun getRandomDummyValue(): Any {
-        return when (Random.nextInt(4)) {
-            0 -> "value"
+    private fun getDummyValue(
+        stringValue: String,
+        index: Int,
+    ): Any =
+        when (index % 4) {
+            0 -> stringValue
             1 -> Random.nextInt(0, 100)
             2 -> listOf<Any>()
             else -> mutableMapOf<String, Any>()
         }
-    }
+
+    private fun streamDocuments(blueprintKey: String?): Stream<JsonSchemaDocument> =
+        if (blueprintKey == null) {
+            emptyList<JsonSchemaDocument>().stream()
+        } else {
+            jsonSchemaDocumentRepositoryStreaming
+                .streamAllByBluePrintKey(blueprintKey)
+        }
+
+    private fun streamToMap(stream: Stream<JsonSchemaDocument>): Iterable<Map<String, Any?>> =
+        Iterable {
+            val iterator = stream.iterator()
+            object : Iterator<Map<String, Any?>> {
+                override fun hasNext(): Boolean = iterator.hasNext()
+
+                override fun next(): Map<String, Any?> =
+                    objectMapper.convertValue<Map<String, Any?>>(iterator.next().content().asJson())
+            }
+        }
+
+    private fun defaultTemplateContent(templateType: String): String =
+        when (templateType) {
+            "mail" ->
+                """
+                |<!DOCTYPE html>
+                |<html lang="en">
+                |  <head>
+                |    <meta charset="utf-8" />
+                |    <title>Email</title>
+                |  </head>
+                |  <body>
+                |    <p>Hi ${'$'}{doc.fullName},</p>
+                |
+                |    <p><b>This is an example mail</b></p>
+                |  </body>
+                |</html>
+            |
+                """.trimMargin()
+
+            "text" ->
+                """
+                |<#if doc.firstName == ''>
+                |  Mr. ${'$'}{doc.lastName}
+                |<#else>
+                |    ${'$'}{doc.firstName} ${'$'}{doc.lastName}
+                |</#if>
+            |
+                """.trimMargin()
+
+            "pdf" ->
+                """
+                |<!DOCTYPE html>
+                |<html lang="en">
+                |  <head>
+                |    <meta charset="UTF-8" />
+                |    <title>Example PDF</title>
+                |  </head>
+                |  <body>
+                |    <div class="header">
+                |      <p>This is an example PDF</p>
+                |    </div>
+                |  </body>
+                |</html>
+            |
+                """.trimMargin()
+
+            "csv" ->
+                """
+                |Example;First name;Last name
+                |<#list docs as doc>
+                |  This is an example;${'$'}{doc.firstName};${'$'}{doc.lastName}
+                |</#list>
+            |
+                """.trimMargin()
+
+            else -> ""
+        }
 
     companion object {
         private val logger = KotlinLogging.logger {}

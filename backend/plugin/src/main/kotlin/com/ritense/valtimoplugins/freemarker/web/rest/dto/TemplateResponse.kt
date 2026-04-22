@@ -20,23 +20,25 @@ import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
 
 data class TemplateResponse(
     val key: String,
-    val caseDefinitionName: String? = null,
+    val caseDefinitionKey: String? = null,
+    val caseDefinitionVersionTag: String? = null,
+    val buildingBlockDefinitionKey: String? = null,
+    val buildingBlockDefinitionVersionTag: String? = null,
     val type: String,
     val metadata: Map<String, Any?>,
     val content: String,
-    val readOnly: Boolean,
 ) {
-
     companion object {
-        fun of(template: ValtimoTemplate, readOnly: Boolean): TemplateResponse {
-            return TemplateResponse(
+        fun of(template: ValtimoTemplate): TemplateResponse =
+            TemplateResponse(
                 key = template.key,
-                caseDefinitionName = template.caseDefinitionName,
+                caseDefinitionKey = template.caseDefinitionId?.key,
+                caseDefinitionVersionTag = template.caseDefinitionId?.versionTag?.toString(),
+                buildingBlockDefinitionKey = template.buildingBlockDefinitionId?.key,
+                buildingBlockDefinitionVersionTag = template.buildingBlockDefinitionId?.versionTag?.toString(),
                 type = template.type,
                 metadata = template.metadata,
                 content = template.content,
-                readOnly = readOnly,
             )
-        }
     }
 }

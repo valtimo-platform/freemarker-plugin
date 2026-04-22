@@ -16,44 +16,60 @@
 
 package com.ritense.valtimoplugins.freemarker.repository
 
+import com.ritense.valtimo.contract.buildingblock.BuildingBlockDefinitionId
+import com.ritense.valtimo.contract.case_.CaseDefinitionId
 import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
 import org.springframework.data.jpa.domain.Specification
 
 class ValtimoTemplateSpecificationHelper {
-
     companion object {
-
         const val KEY: String = "key"
-        const val CASE_DEFINITION_NAME: String = "caseDefinitionName"
+        const val CASE_DEFINITION_ID: String = "caseDefinitionId"
+        const val BUILDING_BLOCK_DEFINITION_ID: String = "buildingBlockDefinitionId"
         const val TYPE: String = "type"
 
         @JvmStatic
-        fun query() = Specification<ValtimoTemplate> { _, _, cb ->
-            cb.equal(cb.literal(1), 1)
-        }
-
-        @JvmStatic
-        fun byKey(key: String) = Specification<ValtimoTemplate> { root, _, cb ->
-            cb.equal(root.get<Any>(KEY), key)
-        }
-
-        @JvmStatic
-        fun byCaseDefinitionName(caseDefinitionName: String?) = Specification<ValtimoTemplate> { root, _, cb ->
-            if (caseDefinitionName == null) {
-                root.get<Any>(CASE_DEFINITION_NAME).isNull
-            } else {
-                cb.equal(root.get<Any>(CASE_DEFINITION_NAME), caseDefinitionName)
+        fun query() =
+            Specification<ValtimoTemplate> { _, _, cb ->
+                cb.equal(cb.literal(1), 1)
             }
-        }
 
         @JvmStatic
-        fun byType(type: String) = Specification<ValtimoTemplate> { root, _, cb ->
-            cb.equal(root.get<Any>(TYPE), type)
-        }
+        fun byKey(key: String) =
+            Specification<ValtimoTemplate> { root, _, cb ->
+                cb.equal(root.get<Any>(KEY), key)
+            }
 
         @JvmStatic
-        fun byKeyAndCaseDefinitionNameAndType(key: String, caseDefinitionName: String?, type: String) =
-            byKey(key).and(byCaseDefinitionName(caseDefinitionName)).and(byType(type))
+        fun byCaseDefinitionId(caseDefinitionId: CaseDefinitionId?) =
+            Specification<ValtimoTemplate> { root, _, cb ->
+                if (caseDefinitionId == null) {
+                    root.get<Any>(CASE_DEFINITION_ID).isNull
+                } else {
+                    cb.equal(root.get<Any>(CASE_DEFINITION_ID), caseDefinitionId)
+                }
+            }
 
+        @JvmStatic
+        fun byBuildingBlockDefinitionId(buildingBlockDefinitionId: BuildingBlockDefinitionId?) =
+            Specification<ValtimoTemplate> { root, _, cb ->
+                if (buildingBlockDefinitionId == null) {
+                    root.get<Any>(BUILDING_BLOCK_DEFINITION_ID).isNull
+                } else {
+                    cb.equal(root.get<Any>(BUILDING_BLOCK_DEFINITION_ID), buildingBlockDefinitionId)
+                }
+            }
+
+        @JvmStatic
+        fun byType(type: String) =
+            Specification<ValtimoTemplate> { root, _, cb ->
+                cb.equal(root.get<Any>(TYPE), type)
+            }
+
+        @JvmStatic
+        fun byTypes(types: List<String>) =
+            Specification<ValtimoTemplate> { root, _, cb ->
+                root.get<Any>(TYPE).`in`(types)
+            }
     }
 }

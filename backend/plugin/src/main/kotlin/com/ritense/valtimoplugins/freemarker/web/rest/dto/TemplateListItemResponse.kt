@@ -20,14 +20,13 @@ import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
 
 data class TemplateListItemResponse(
     val key: String,
-    val readOnly: Boolean,
+    val type: String,
 ) {
     companion object {
-        fun of(template: ValtimoTemplate, readOnly: Boolean): TemplateListItemResponse {
-            return TemplateListItemResponse(
+        fun of(template: ValtimoTemplate): TemplateListItemResponse =
+            TemplateListItemResponse(
                 key = template.key,
-                readOnly = readOnly
+                type = template.type,
             )
-        }
     }
 }

@@ -32,12 +32,10 @@ class DocumentGeneratorPluginFactory(
     private val processDocumentService: ProcessDocumentService,
     private val storageService: TemporaryResourceStorageService,
 ) : PluginFactory<DocumentGeneratorPlugin>(pluginService) {
-
-    override fun create(): DocumentGeneratorPlugin {
-        return DocumentGeneratorPlugin(
+    override fun create(): DocumentGeneratorPlugin =
+        DocumentGeneratorPlugin(
             templateService,
             processDocumentService,
             storageService,
         )
-    }
 }

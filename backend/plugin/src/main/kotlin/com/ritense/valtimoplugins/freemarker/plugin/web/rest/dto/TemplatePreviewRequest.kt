@@ -20,4 +20,3 @@ data class TemplatePreviewRequest(
     val fileName: String,
     val content: String,
 )
-

@@ -20,8 +20,8 @@ import com.ritense.plugin.PluginFactory
 import com.ritense.plugin.service.PluginService
 import com.ritense.processdocument.service.ProcessDocumentService
 import com.ritense.resource.service.TemporaryResourceStorageService
-import com.ritense.valtimoplugins.freemarker.service.TemplateService
 import com.ritense.valtimo.contract.annotation.SkipComponentScan
+import com.ritense.valtimoplugins.freemarker.service.TemplateService
 import org.springframework.stereotype.Component
 
 @Component
@@ -32,12 +32,10 @@ class MailTemplatePluginFactory(
     private val processDocumentService: ProcessDocumentService,
     private val storageService: TemporaryResourceStorageService,
 ) : PluginFactory<MailTemplatePlugin>(pluginService) {
-
-    override fun create(): MailTemplatePlugin {
-        return MailTemplatePlugin(
+    override fun create(): MailTemplatePlugin =
+        MailTemplatePlugin(
             templateService,
             processDocumentService,
             storageService,
         )
-    }
 }

@@ -18,7 +18,6 @@ package com.ritense.valtimoplugins.freemarker.plugin.mail
 
 import com.ritense.authorization.AuthorizationContext.Companion.runWithoutAuthorization
 import com.ritense.document.domain.impl.request.NewDocumentRequest
-import com.ritense.valtimoplugins.freemarker.BaseIntegrationTest
 import com.ritense.plugin.domain.PluginConfiguration
 import com.ritense.plugin.domain.PluginConfigurationId
 import com.ritense.plugin.service.PluginService
@@ -26,19 +25,19 @@ import com.ritense.processdocument.domain.impl.request.NewDocumentAndStartProces
 import com.ritense.processdocument.service.ProcessDocumentService
 import com.ritense.processdocument.service.result.NewDocumentAndStartProcessResult
 import com.ritense.resource.service.TemporaryResourceStorageService
-import com.ritense.valtimo.camunda.service.CamundaRuntimeService
 import com.ritense.valtimo.contract.json.MapperSingleton
-import java.util.UUID
+import com.ritense.valtimo.operaton.service.OperatonRuntimeService
+import com.ritense.valtimoplugins.freemarker.BaseIntegrationTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 @Transactional
 class MailTemplatePluginIT : BaseIntegrationTest() {
-
     @Autowired
     lateinit var processDocumentService: ProcessDocumentService
 
@@ -46,7 +45,7 @@ class MailTemplatePluginIT : BaseIntegrationTest() {
     lateinit var pluginService: PluginService
 
     @Autowired
-    lateinit var camundaRuntimeService: CamundaRuntimeService
+    lateinit var operatonRuntimeService: OperatonRuntimeService
 
     @Autowired
     lateinit var storageService: TemporaryResourceStorageService
@@ -56,20 +55,22 @@ class MailTemplatePluginIT : BaseIntegrationTest() {
     @BeforeEach
     internal fun setUp() {
         configuration =
-            pluginService.getPluginConfiguration(PluginConfigurationId(UUID.fromString("515cc605-b5e5-4875-bbf0-f609f788f80e")))
+            pluginService.getPluginConfiguration(
+                PluginConfigurationId(UUID.fromString("515cc605-b5e5-4875-bbf0-f609f788f80e")),
+            )
     }
 
     @Test
     fun `save generate mail and save to temporary file`() {
-
         val result = createDocumentAndStartProcess("""{ "lastname": "Doe", "houseNumber": 133 }""")
 
-        val contentId = runWithoutAuthorization {
-            camundaRuntimeService.getVariables(
-                result.resultingProcessInstanceId().get().toString(),
-                listOf("contentId")
-            )["contentId"] as String
-        }
+        val contentId =
+            runWithoutAuthorization {
+                operatonRuntimeService.getVariables(
+                    result.resultingProcessInstanceId().get().toString(),
+                    listOf("contentId"),
+                )["contentId"] as String
+            }
         assertNotNull(contentId)
         val mailContent = storageService.getResourceContentAsInputStream(contentId).bufferedReader().readText()
         assertEquals("<b>Lastname: Doe, House number: 133!</b>", mailContent)
@@ -77,15 +78,18 @@ class MailTemplatePluginIT : BaseIntegrationTest() {
 
     private fun createDocumentAndStartProcess(
         documentContent: String = "{}",
-        processVars: Map<String, Any> = emptyMap()
+        processVars: Map<String, Any> = emptyMap(),
     ): NewDocumentAndStartProcessResult {
-        val request = NewDocumentAndStartProcessRequest(
-            PROCESS_DEFINITION_KEY,
-            NewDocumentRequest(
-                DOCUMENT_DEFINITION_NAME,
-                MapperSingleton.get().readTree(documentContent)
+        val request =
+            NewDocumentAndStartProcessRequest(
+                PROCESS_DEFINITION_KEY,
+                NewDocumentRequest(
+                    DOCUMENT_DEFINITION_NAME,
+                    CASE_DEFINITION_KEY,
+                    CASE_DEFINITION_VERSION_TAG,
+                    MapperSingleton.get().readTree(documentContent),
+                ),
             )
-        )
         request.withProcessVars(processVars)
         val result = runWithoutAuthorization { processDocumentService.newDocumentAndStartProcess(request) }
         if (result.errors().isNotEmpty()) {
@@ -95,8 +99,9 @@ class MailTemplatePluginIT : BaseIntegrationTest() {
     }
 
     companion object {
+        private const val CASE_DEFINITION_KEY = "profile"
+        private const val CASE_DEFINITION_VERSION_TAG = "1.0.0"
         private const val PROCESS_DEFINITION_KEY = "TestProcess"
         private const val DOCUMENT_DEFINITION_NAME = "profile"
     }
-
 }

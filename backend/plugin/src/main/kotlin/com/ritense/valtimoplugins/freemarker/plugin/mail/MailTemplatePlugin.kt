@@ -22,6 +22,7 @@ import com.ritense.plugin.annotation.PluginActionProperty
 import com.ritense.processdocument.domain.impl.OperatonProcessInstanceId
 import com.ritense.processdocument.service.ProcessDocumentService
 import com.ritense.processlink.domain.ActivityTypeWithEventName.SERVICE_TASK_START
+import com.ritense.resource.domain.MetadataType
 import com.ritense.resource.service.TemporaryResourceStorageService
 import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_MAIL
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
@@ -30,7 +31,7 @@ import org.operaton.bpm.engine.delegate.DelegateExecution
 @Plugin(
     key = "mail-template",
     title = "Mail template Plugin",
-    description = "Create Mail templates with Freemarker"
+    description = "Create Mail templates with Freemarker",
 )
 open class MailTemplatePlugin(
     private val templateService: TemplateService,
@@ -41,15 +42,22 @@ open class MailTemplatePlugin(
         key = "generate-mail-file",
         title = "Generate Mail File",
         description = "Generates an Mail based on the template and saves it in a temporary file",
-        activityTypes = [SERVICE_TASK_START]
+        activityTypes = [SERVICE_TASK_START],
     )
     open fun generateMailFile(
         execution: DelegateExecution,
         @PluginActionProperty mailTemplateKey: String,
-        @PluginActionProperty processVariableName: String
+        @PluginActionProperty processVariableName: String,
     ) {
         val mailContent = generateMailContent(execution, mailTemplateKey)
-        val resourceId = storageService.store(mailContent.byteInputStream())
+        val resourceId =
+            storageService.store(
+                mailContent.byteInputStream(),
+                mapOf(
+                    MetadataType.FILE_NAME.key to "$mailTemplateKey.html",
+                    MetadataType.CONTENT_TYPE.key to "html",
+                ),
+            )
         execution.setVariable(processVariableName, resourceId)
     }
 
@@ -57,25 +65,28 @@ open class MailTemplatePlugin(
         key = "generate-mail-content",
         title = "Generate Mail content",
         description = "Generates Mail text based on the template and saves the text in a process variable",
-        activityTypes = [SERVICE_TASK_START]
+        activityTypes = [SERVICE_TASK_START],
     )
     open fun generateMailContent(
         execution: DelegateExecution,
         @PluginActionProperty mailTemplateKey: String,
-        @PluginActionProperty processVariableName: String
+        @PluginActionProperty processVariableName: String,
     ) {
         val mailContent = generateMailContent(execution, mailTemplateKey)
         execution.setVariable(processVariableName, mailContent)
     }
 
-    private fun generateMailContent(execution: DelegateExecution, templateKey: String): String {
-        val document = processDocumentService.getDocument(
-            OperatonProcessInstanceId(execution.processInstanceId),
-            execution
-        )
+    private fun generateMailContent(
+        execution: DelegateExecution,
+        templateKey: String,
+    ): String {
+        val document =
+            processDocumentService.getDocument(
+                OperatonProcessInstanceId(execution.processInstanceId),
+                execution,
+            )
         return templateService.generate(
             templateKey = templateKey,
-            caseDefinitionName = document.definitionId().name(),
             templateType = TEMPLATE_TYPE_MAIL,
             document = document,
             processVariables = execution.variables,

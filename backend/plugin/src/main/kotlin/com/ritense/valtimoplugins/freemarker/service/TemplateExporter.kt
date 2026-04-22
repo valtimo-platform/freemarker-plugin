@@ -22,8 +22,8 @@ import com.ritense.exporter.ExportPrettyPrinter
 import com.ritense.exporter.ExportResult
 import com.ritense.exporter.Exporter
 import com.ritense.exporter.request.DocumentDefinitionExportRequest
-import com.ritense.valtimoplugins.freemarker.model.TemplateDeploymentMetadata
 import com.ritense.valtimo.contract.annotation.SkipComponentScan
+import com.ritense.valtimoplugins.freemarker.model.TemplateDeploymentMetadata
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
@@ -32,9 +32,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class TemplateExporter(
     private val objectMapper: ObjectMapper,
-    private val templateService: TemplateService
+    private val templateService: TemplateService,
 ) : Exporter<DocumentDefinitionExportRequest> {
-
     override fun supports() = DocumentDefinitionExportRequest::class.java
 
     override fun export(request: DocumentDefinitionExportRequest): ExportResult {
@@ -44,22 +43,24 @@ class TemplateExporter(
             return ExportResult()
         }
 
-        val templateDeploymentMetadataList = templates.map { template ->
-            TemplateDeploymentMetadata(
-                templateKey = template.key,
-                caseDefinitionName = template.caseDefinitionName,
-                templateType = template.type,
-                metadata = template.metadata,
-                content = template.content,
-            )
-        }
+        val templateDeploymentMetadataList =
+            templates.map { template ->
+                TemplateDeploymentMetadata(
+                    templateKey = template.key,
+                    caseDefinitionName = template.caseDefinitionName,
+                    templateType = template.type,
+                    metadata = template.metadata,
+                    content = template.content,
+                )
+            }
 
-        val exportFiles = templateDeploymentMetadataList.map { templateMetadata ->
-            ExportFile(
-                PATH.format(templateMetadata.templateKey, templateMetadata.templateType),
-                objectMapper.writer(ExportPrettyPrinter()).writeValueAsBytes(templateMetadata)
-            )
-        }
+        val exportFiles =
+            templateDeploymentMetadataList.map { templateMetadata ->
+                ExportFile(
+                    PATH.format(templateMetadata.templateKey, templateMetadata.templateType),
+                    objectMapper.writer(ExportPrettyPrinter()).writeValueAsBytes(templateMetadata),
+                )
+            }
 
         return ExportResult(exportFiles.toSet(), setOf())
     }

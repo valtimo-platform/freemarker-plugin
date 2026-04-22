@@ -27,49 +27,49 @@ import com.ritense.resource.service.TemporaryResourceStorageService
 import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_CSV
 import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_PDF
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.OutputStream
-import java.io.OutputStreamWriter
-import java.io.StringReader
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.csv.CSVPrinter
 import org.operaton.bpm.engine.delegate.DelegateExecution
 import org.xhtmlrenderer.pdf.ITextRenderer
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.OutputStream
+import java.io.OutputStreamWriter
+import java.io.StringReader
 
 @Plugin(
     key = "document-generator",
     title = "Document generator Plugin",
-    description = "Create documents with Freemarker"
+    description = "Create documents with Freemarker",
 )
 open class DocumentGeneratorPlugin(
     private val templateService: TemplateService,
     private val processDocumentService: ProcessDocumentService,
     private val storageService: TemporaryResourceStorageService,
 ) {
-
     @PluginAction(
         key = "generate-pdf",
         title = "Generate PDF",
         description = "Generates PDF based on the template and saves it in a temporary file",
-        activityTypes = [SERVICE_TASK_START]
+        activityTypes = [SERVICE_TASK_START],
     )
     open fun generatePdf(
         execution: DelegateExecution,
         @PluginActionProperty templateKey: String,
-        @PluginActionProperty processVariableName: String
+        @PluginActionProperty processVariableName: String,
     ) {
         val htmlString = generateDocumentContent(execution, templateKey, TEMPLATE_TYPE_PDF)
         ByteArrayOutputStream().use { outputStream ->
             generatePdf(htmlString, outputStream)
-            val resourceId = storageService.store(
-                ByteArrayInputStream(outputStream.toByteArray()),
-                mapOf(
-                    MetadataType.FILE_NAME.key to "$templateKey.pdf",
-                    MetadataType.CONTENT_TYPE.key to "pdf"
+            val resourceId =
+                storageService.store(
+                    ByteArrayInputStream(outputStream.toByteArray()),
+                    mapOf(
+                        MetadataType.FILE_NAME.key to "$templateKey.pdf",
+                        MetadataType.CONTENT_TYPE.key to "pdf",
+                    ),
                 )
-            )
             execution.setVariable(processVariableName, resourceId)
         }
     }
@@ -78,28 +78,32 @@ open class DocumentGeneratorPlugin(
         key = "generate-csv",
         title = "Generate CSV",
         description = "Generates CSV based on the template and saves it in a temporary file",
-        activityTypes = [SERVICE_TASK_START]
+        activityTypes = [SERVICE_TASK_START],
     )
     open fun generateCsv(
         execution: DelegateExecution,
         @PluginActionProperty templateKey: String,
-        @PluginActionProperty processVariableName: String
+        @PluginActionProperty processVariableName: String,
     ) {
         val csvString = generateDocumentContent(execution, templateKey, TEMPLATE_TYPE_CSV)
         ByteArrayOutputStream().use { outputStream ->
             generateCsv(csvString, outputStream)
-            val resourceId = storageService.store(
-                ByteArrayInputStream(outputStream.toByteArray()),
-                mapOf(
-                    MetadataType.FILE_NAME.key to "$templateKey.csv",
-                    MetadataType.CONTENT_TYPE.key to "csv"
+            val resourceId =
+                storageService.store(
+                    ByteArrayInputStream(outputStream.toByteArray()),
+                    mapOf(
+                        MetadataType.FILE_NAME.key to "$templateKey.csv",
+                        MetadataType.CONTENT_TYPE.key to "csv",
+                    ),
                 )
-            )
             execution.setVariable(processVariableName, resourceId)
         }
     }
 
-    fun generatePdf(htmlString: String, out: OutputStream) {
+    fun generatePdf(
+        htmlString: String,
+        out: OutputStream,
+    ) {
         val renderer = ITextRenderer()
         with(renderer) {
             sharedContext.isPrint = true
@@ -110,25 +114,34 @@ open class DocumentGeneratorPlugin(
         }
     }
 
-    fun generateCsv(csvString: String, out: OutputStream) {
+    fun generateCsv(
+        csvString: String,
+        out: OutputStream,
+    ) {
         OutputStreamWriter(out).use { writer ->
             val reader = StringReader(csvString)
 
-            val parser = CSVParser.builder()
-                .setReader(reader)
-                .setFormat(
-                    CSVFormat.TDF.builder().setHeader()
-                        .setSkipHeaderRecord(true).get()
-                )
-                .get()
+            val parser =
+                CSVParser
+                    .builder()
+                    .setReader(reader)
+                    .setFormat(
+                        CSVFormat.TDF
+                            .builder()
+                            .setHeader()
+                            .setSkipHeaderRecord(true)
+                            .get(),
+                    ).get()
             val headers = parser.headerNames
 
-            val printer = CSVPrinter(
-                writer,
-                CSVFormat.TDF.builder()
-                    .setHeader(*headers.toTypedArray())
-                    .get()
-            )
+            val printer =
+                CSVPrinter(
+                    writer,
+                    CSVFormat.TDF
+                        .builder()
+                        .setHeader(*headers.toTypedArray())
+                        .get(),
+                )
             parser.forEach { record ->
                 printer.printRecord(headers.map { record[it] })
             }
@@ -139,12 +152,13 @@ open class DocumentGeneratorPlugin(
     private fun generateDocumentContent(
         execution: DelegateExecution,
         templateKey: String,
-        templateType: String
+        templateType: String,
     ): String {
-        val document = processDocumentService.getDocument(
-            OperatonProcessInstanceId(execution.processInstanceId),
-            execution
-        )
+        val document =
+            processDocumentService.getDocument(
+                OperatonProcessInstanceId(execution.processInstanceId),
+                execution,
+            )
         return templateService.generate(
             templateKey = templateKey,
             templateType = templateType,

@@ -17,39 +17,50 @@
 package com.ritense.valtimoplugins.freemarker.autoconfiguration
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ritense.valtimo.contract.buildingblock.BuildingBlockDefinitionChecker
+import com.ritense.valtimo.contract.case_.CaseDefinitionChecker
 import com.ritense.valtimo.contract.config.LiquibaseMasterChangeLogLocation
 import com.ritense.valtimoplugins.freemarker.config.TemplateHttpSecurityConfigurer
 import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
+import com.ritense.valtimoplugins.freemarker.listener.TemplateBuildingBlockEventListener
+import com.ritense.valtimoplugins.freemarker.listener.TemplateCaseEventListener
+import com.ritense.valtimoplugins.freemarker.repository.JsonSchemaDocumentRepositoryStreaming
 import com.ritense.valtimoplugins.freemarker.repository.TemplateRepository
-import com.ritense.valtimoplugins.freemarker.service.TemplateDeploymentService
-import com.ritense.valtimoplugins.freemarker.service.TemplateExporter
-import com.ritense.valtimoplugins.freemarker.service.TemplateImporter
+import com.ritense.valtimoplugins.freemarker.service.BuildingBlockDefinitionTemplateExporter
+import com.ritense.valtimoplugins.freemarker.service.BuildingBlockDefinitionTemplateImporter
+import com.ritense.valtimoplugins.freemarker.service.DocumentDefinitionTemplateExporter
+import com.ritense.valtimoplugins.freemarker.service.DocumentDefinitionTemplateImporter
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
 import com.ritense.valtimoplugins.freemarker.web.rest.TemplateManagementResource
 import com.ritense.valueresolver.ValueResolverService
 import freemarker.template.Configuration
-import freemarker.template.Configuration.VERSION_2_3_32
+import freemarker.template.Configuration.VERSION_2_3_34
+import freemarker.template.DefaultObjectWrapperBuilder
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.domain.EntityScan
-import org.springframework.cache.annotation.EnableCaching
 import org.springframework.context.annotation.Bean
 import org.springframework.core.Ordered.HIGHEST_PRECEDENCE
 import org.springframework.core.annotation.Order
-import org.springframework.core.io.ResourceLoader
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 
 @AutoConfiguration
-@EnableJpaRepositories(basePackageClasses = [TemplateRepository::class])
+@EnableJpaRepositories(basePackageClasses = [TemplateRepository::class, JsonSchemaDocumentRepositoryStreaming::class])
 @EntityScan(basePackageClasses = [ValtimoTemplate::class])
-@EnableCaching
 class TemplateAutoConfiguration {
-
     @Bean
     @ConditionalOnMissingBean(Configuration::class)
     fun freemarkerConfiguration(): Configuration {
-        val configuration = Configuration(VERSION_2_3_32)
+        val configuration = Configuration(VERSION_2_3_34)
         configuration.logTemplateExceptions = false
+
+        val objectWrapper =
+            DefaultObjectWrapperBuilder(configuration.incompatibleImprovements)
+                .apply {
+                    iterableSupport = true
+                }.build()
+        configuration.objectWrapper = objectWrapper
+
         return configuration
     }
 
@@ -60,74 +71,101 @@ class TemplateAutoConfiguration {
         objectMapper: ObjectMapper,
         valueResolverService: ValueResolverService,
         freemarkerConfiguration: Configuration,
-    ): TemplateService {
-        return TemplateService(
+        caseDefinitionChecker: CaseDefinitionChecker,
+        buildingBlockDefinitionChecker: BuildingBlockDefinitionChecker,
+        jsonSchemaDocumentRepositoryStreaming: JsonSchemaDocumentRepositoryStreaming,
+    ): TemplateService =
+        TemplateService(
             templateRepository,
             objectMapper,
             valueResolverService,
             freemarkerConfiguration,
+            caseDefinitionChecker,
+            buildingBlockDefinitionChecker,
+            jsonSchemaDocumentRepositoryStreaming,
         )
-    }
 
     @Bean
-    @ConditionalOnMissingBean(TemplateDeploymentService::class)
-    fun templateDeploymentService(
-        resourceLoader: ResourceLoader,
+    @ConditionalOnMissingBean(DocumentDefinitionTemplateExporter::class)
+    fun documentDefinitionTemplateExporter(
+        objectMapper: ObjectMapper,
+        templateService: TemplateService,
+    ): DocumentDefinitionTemplateExporter =
+        DocumentDefinitionTemplateExporter(
+            objectMapper,
+            templateService,
+        )
+
+    @Bean
+    @ConditionalOnMissingBean(DocumentDefinitionTemplateImporter::class)
+    fun documentDefinitionTemplateImporter(
         templateService: TemplateService,
         objectMapper: ObjectMapper,
-    ): TemplateDeploymentService {
-        return TemplateDeploymentService(
-            resourceLoader,
+    ): DocumentDefinitionTemplateImporter =
+        DocumentDefinitionTemplateImporter(
             templateService,
             objectMapper,
         )
-    }
 
     @Bean
-    @ConditionalOnMissingBean(TemplateExporter::class)
-    fun templateExporter(
+    @ConditionalOnMissingBean(BuildingBlockDefinitionTemplateExporter::class)
+    fun buildingBlockDefinitionTemplateExporter(
         objectMapper: ObjectMapper,
-        templateService: TemplateService
-    ): TemplateExporter {
-        return TemplateExporter(
+        templateService: TemplateService,
+    ): BuildingBlockDefinitionTemplateExporter =
+        BuildingBlockDefinitionTemplateExporter(
             objectMapper,
             templateService,
         )
-    }
 
     @Bean
-    @ConditionalOnMissingBean(TemplateImporter::class)
-    fun templateImporter(
-        templateDeploymentService: TemplateDeploymentService,
-    ): TemplateImporter {
-        return TemplateImporter(
-            templateDeploymentService
+    @ConditionalOnMissingBean(BuildingBlockDefinitionTemplateImporter::class)
+    fun buildingBlockDefinitionTemplateImporter(
+        templateService: TemplateService,
+        objectMapper: ObjectMapper,
+    ): BuildingBlockDefinitionTemplateImporter =
+        BuildingBlockDefinitionTemplateImporter(
+            templateService,
+            objectMapper,
         )
-    }
+
+    @Bean
+    @ConditionalOnMissingBean(TemplateCaseEventListener::class)
+    fun templateCaseEventListener(
+        templateService: TemplateService,
+        templateRepository: TemplateRepository,
+    ): TemplateCaseEventListener =
+        TemplateCaseEventListener(
+            templateService,
+            templateRepository,
+        )
+
+    @Bean
+    @ConditionalOnMissingBean(TemplateBuildingBlockEventListener::class)
+    fun templateBuildingBlockEventListener(
+        templateService: TemplateService,
+        templateRepository: TemplateRepository,
+    ): TemplateBuildingBlockEventListener =
+        TemplateBuildingBlockEventListener(
+            templateService,
+            templateRepository,
+        )
 
     @Bean
     @ConditionalOnMissingBean(TemplateManagementResource::class)
-    fun templateManagementResource(
-        templateService: TemplateService,
-        templateDeploymentService: TemplateDeploymentService,
-    ): TemplateManagementResource {
-        return TemplateManagementResource(
+    fun templateManagementResource(templateService: TemplateService): TemplateManagementResource =
+        TemplateManagementResource(
             templateService,
-            templateDeploymentService
         )
-    }
 
     @Order(301)
     @Bean
     @ConditionalOnMissingBean(TemplateHttpSecurityConfigurer::class)
-    fun templateHttpSecurityConfigurer(): TemplateHttpSecurityConfigurer {
-        return TemplateHttpSecurityConfigurer()
-    }
+    fun templateHttpSecurityConfigurer(): TemplateHttpSecurityConfigurer = TemplateHttpSecurityConfigurer()
 
     @Order(HIGHEST_PRECEDENCE + 32)
     @Bean
     @ConditionalOnMissingBean(name = ["templateLiquibaseMasterChangeLogLocation"])
-    fun templateLiquibaseMasterChangeLogLocation(): LiquibaseMasterChangeLogLocation {
-        return LiquibaseMasterChangeLogLocation("config/liquibase/template-master.xml")
-    }
+    fun templateLiquibaseMasterChangeLogLocation(): LiquibaseMasterChangeLogLocation =
+        LiquibaseMasterChangeLogLocation("config/liquibase/template-master.xml")
 }

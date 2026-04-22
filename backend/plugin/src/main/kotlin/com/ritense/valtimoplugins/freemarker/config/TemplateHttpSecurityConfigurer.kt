@@ -27,16 +27,23 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher
 
 class TemplateHttpSecurityConfigurer : HttpSecurityConfigurer {
-
     override fun configure(http: HttpSecurity) {
         try {
             http.authorizeHttpRequests { requests ->
                 requests
-                    .requestMatchers(antMatcher(GET, "/api/management/v1/template")).hasAuthority(ADMIN)
-                    .requestMatchers(antMatcher(GET, "/api/management/v1/case-definition/{caseDefinitionName}/template-type/{templateType}/template/{key}")).hasAuthority(ADMIN)
-                    .requestMatchers(antMatcher(POST, "/api/management/v1/template")).hasAuthority(ADMIN)
-                    .requestMatchers(antMatcher(PUT, "/api/management/v1/template")).hasAuthority(ADMIN)
-                    .requestMatchers(antMatcher(DELETE, "/api/management/v1/template")).hasAuthority(ADMIN)
+                    .requestMatchers(antMatcher(GET, "/api/management/v1/template"))
+                    .hasAuthority(ADMIN)
+                    .requestMatchers(
+                        antMatcher(GET, "/api/management/v1/template-type/{templateType}/template/{key}"),
+                    ).hasAuthority(ADMIN)
+                    .requestMatchers(antMatcher(POST, "/api/management/v1/template"))
+                    .hasAuthority(ADMIN)
+                    .requestMatchers(antMatcher(PUT, "/api/management/v1/template"))
+                    .hasAuthority(ADMIN)
+                    .requestMatchers(antMatcher(DELETE, "/api/management/v1/template"))
+                    .hasAuthority(ADMIN)
+                    .requestMatchers(antMatcher(POST, "/api/management/v1/template/preview"))
+                    .hasAuthority(ADMIN)
             }
         } catch (e: Exception) {
             throw HttpConfigurerConfigurationException(e)

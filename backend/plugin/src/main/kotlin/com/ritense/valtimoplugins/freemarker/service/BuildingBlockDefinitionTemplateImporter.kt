@@ -27,8 +27,8 @@ import com.ritense.valtimo.contract.buildingblock.BuildingBlockDefinitionId
 import com.ritense.valtimoplugins.freemarker.model.TemplateDeploymentMetadata
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.io.InputStream
 import org.springframework.stereotype.Component
+import java.io.InputStream
 
 @Component
 @SkipComponentScan
@@ -42,9 +42,10 @@ class BuildingBlockDefinitionTemplateImporter(
 
     override fun supports(fileName: String): Boolean = fileName.matches(FILENAME_REGEX)
 
-    override fun import(request: ImportRequest): Unit = runImporter {
-        deploy(request.fileName, request.content.inputStream(), request.buildingBlockDefinitionId!!)
-    }
+    override fun import(request: ImportRequest): Unit =
+        runImporter {
+            deploy(request.fileName, request.content.inputStream(), request.buildingBlockDefinitionId!!)
+        }
 
     override fun partOfCaseDefinition() = false
 
@@ -53,23 +54,24 @@ class BuildingBlockDefinitionTemplateImporter(
     private fun deploy(
         fileName: String,
         fileContent: InputStream,
-        buildingBlockDefinitionId: BuildingBlockDefinitionId
+        buildingBlockDefinitionId: BuildingBlockDefinitionId,
     ) {
         try {
-            logger.info { "Deploying template from file '${fileName}'" }
+            logger.info { "Deploying template from file '$fileName'" }
             val template = objectMapper.readValue<TemplateDeploymentMetadata>(fileContent)
             require(template.content != null || template.contentRef != null) {
-                "Missing template content in file '${fileName}'"
+                "Missing template content in file '$fileName'"
             }
-            val content = template.content
-                ?: this::class.java.getResource(template.contentRef!!)!!.readText()
+            val content =
+                template.content
+                    ?: this::class.java.getResource(template.contentRef!!)!!.readText()
 
             templateService.saveTemplate(
                 templateKey = template.templateKey,
                 buildingBlockDefinitionId = buildingBlockDefinitionId,
                 templateType = template.templateType,
                 metadata = template.metadata ?: emptyMap(),
-                content = content
+                content = content,
             )
         } catch (e: Exception) {
             throw IllegalStateException("Error while deploying template $fileName", e)

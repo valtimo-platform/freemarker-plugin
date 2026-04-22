@@ -22,6 +22,7 @@ import com.ritense.plugin.annotation.PluginActionProperty
 import com.ritense.processdocument.domain.impl.OperatonProcessInstanceId
 import com.ritense.processdocument.service.ProcessDocumentService
 import com.ritense.processlink.domain.ActivityTypeWithEventName.SERVICE_TASK_START
+import com.ritense.resource.domain.MetadataType
 import com.ritense.resource.service.TemporaryResourceStorageService
 import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_TEXT
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
@@ -30,38 +31,47 @@ import org.operaton.bpm.engine.delegate.DelegateExecution
 @Plugin(
     key = "text-template",
     title = "Text template Plugin",
-    description = "Create Text templates with Freemarker"
+    description = "Create Text templates with Freemarker",
 )
 open class TextTemplatePlugin(
     private val templateService: TemplateService,
     private val processDocumentService: ProcessDocumentService,
     private val storageService: TemporaryResourceStorageService,
 ) {
-
     @PluginAction(
         key = "generate-text-file",
         title = "Generate Text File",
         description = "Generates text based on the template and saves it in a temporary file",
-        activityTypes = [SERVICE_TASK_START]
+        activityTypes = [SERVICE_TASK_START],
     )
     open fun generateTextFile(
         execution: DelegateExecution,
         @PluginActionProperty textTemplateKey: String,
-        @PluginActionProperty processVariableName: String
+        @PluginActionProperty processVariableName: String,
     ) {
         val textContent = generateTextContent(execution, textTemplateKey)
-        val resourceId = storageService.store(textContent.byteInputStream())
+        val resourceId =
+            storageService.store(
+                textContent.byteInputStream(),
+                mapOf(
+                    MetadataType.FILE_NAME.key to "$textTemplateKey.txt",
+                    MetadataType.CONTENT_TYPE.key to "txt",
+                ),
+            )
         execution.setVariable(processVariableName, resourceId)
     }
 
-    private fun generateTextContent(execution: DelegateExecution, templateKey: String): String {
-        val document = processDocumentService.getDocument(
-            OperatonProcessInstanceId(execution.processInstanceId),
-            execution
-        )
+    private fun generateTextContent(
+        execution: DelegateExecution,
+        templateKey: String,
+    ): String {
+        val document =
+            processDocumentService.getDocument(
+                OperatonProcessInstanceId(execution.processInstanceId),
+                execution,
+            )
         return templateService.generate(
             templateKey = templateKey,
-            caseDefinitionName = document.definitionId().name(),
             templateType = TEMPLATE_TYPE_TEXT,
             document = document,
             processVariables = execution.variables,

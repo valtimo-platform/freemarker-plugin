@@ -27,7 +27,6 @@ import org.springframework.context.annotation.Bean
 
 @AutoConfiguration
 class TextTemplateAutoConfiguration {
-
     @Bean
     @ConditionalOnMissingBean(TextTemplatePluginFactory::class)
     fun textTemplatePluginFactory(
@@ -35,14 +34,13 @@ class TextTemplateAutoConfiguration {
         templateService: TemplateService,
         processDocumentService: ProcessDocumentService,
         storageService: TemporaryResourceStorageService,
-    ): TextTemplatePluginFactory {
-        return TextTemplatePluginFactory(
+    ): TextTemplatePluginFactory =
+        TextTemplatePluginFactory(
             pluginService,
             templateService,
             processDocumentService,
             storageService,
         )
-    }
 
     @Bean
     @ConditionalOnMissingBean(TextTemplateValueResolver::class)
@@ -50,12 +48,10 @@ class TextTemplateAutoConfiguration {
         templateService: TemplateService,
         processDocumentService: ProcessDocumentService,
         documentService: DocumentService,
-    ): TextTemplateValueResolver {
-        return TextTemplateValueResolver(
+    ): TextTemplateValueResolver =
+        TextTemplateValueResolver(
             templateService,
             processDocumentService,
             documentService,
         )
-    }
-
 }

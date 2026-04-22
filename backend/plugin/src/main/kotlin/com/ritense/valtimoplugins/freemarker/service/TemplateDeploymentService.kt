@@ -23,8 +23,6 @@ import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
 import com.ritense.valtimoplugins.freemarker.model.TemplateDeploymentMetadata
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.io.IOException
-import java.io.InputStream
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.context.event.EventListener
@@ -34,6 +32,8 @@ import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.ResourcePatternUtils
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.io.IOException
+import java.io.InputStream
 
 @Service
 @SkipComponentScan
@@ -43,7 +43,6 @@ class TemplateDeploymentService(
     private val templateService: TemplateService,
     private val objectMapper: ObjectMapper,
 ) {
-
     @Order(-1)
     @EventListener(ApplicationReadyEvent::class)
     fun deployTemplates() {
@@ -53,49 +52,54 @@ class TemplateDeploymentService(
         }
     }
 
-    fun deploy(fileName: String, fileContent: InputStream) {
+    fun deploy(
+        fileName: String,
+        fileContent: InputStream,
+    ) {
         try {
-            logger.info { "Deploying template from file '${fileName}'" }
+            logger.info { "Deploying template from file '$fileName'" }
             val template = objectMapper.readValue<TemplateDeploymentMetadata>(fileContent)
             require(template.content != null || template.contentRef != null)
-            val content = template.content
-                ?: this::class.java.getResource(template.contentRef!!)!!.readText()
+            val content =
+                template.content
+                    ?: this::class.java.getResource(template.contentRef!!)!!.readText()
 
             templateService.saveTemplate(
                 templateKey = template.templateKey,
                 caseDefinitionName = template.caseDefinitionName,
                 templateType = template.templateType,
                 metadata = template.metadata ?: emptyMap(),
-                content = content
+                content = content,
             )
         } catch (e: Exception) {
             throw IllegalStateException("Error while deploying template $fileName", e)
         }
     }
 
-    @Cacheable(value = [TEMPLATE_EXISTS_CACHE_NAME], key = "{ #template.key, #template.caseDefinitionName, #template.type }")
-    fun deploymentFileExists(
-        template: ValtimoTemplate
-    ) = deploymentFileExists(template.key, template.caseDefinitionName, template.type)
+    @Cacheable(
+        value = [TEMPLATE_EXISTS_CACHE_NAME],
+        key = "{ #template.key, #template.caseDefinitionName, #template.type }",
+    )
+    fun deploymentFileExists(template: ValtimoTemplate) =
+        deploymentFileExists(template.key, template.caseDefinitionName, template.type)
 
     @Cacheable(value = [TEMPLATE_EXISTS_CACHE_NAME], key = "{ #templateKey, #caseDefinitionName, #templateType }")
     fun deploymentFileExists(
         templateKey: String,
         caseDefinitionName: String?,
-        templateType: String
-    ): Boolean {
-        return loadResources().any { resource ->
+        templateType: String,
+    ): Boolean =
+        loadResources().any { resource ->
             val template = objectMapper.readValue<TemplateDeploymentMetadata>(resource.inputStream)
             template.templateKey == templateKey && template.caseDefinitionName == caseDefinitionName
         }
-    }
 
     // Note: This function is slow. It will scan through the entire jar including jars from dependencies for a '*.template.json'
     @Throws(IOException::class)
-    private fun loadResources(): Array<Resource> {
-        return ResourcePatternUtils.getResourcePatternResolver(resourceLoader)
+    private fun loadResources(): Array<Resource> =
+        ResourcePatternUtils
+            .getResourcePatternResolver(resourceLoader)
             .getResources(PATH)
-    }
 
     companion object {
         private val logger: KLogger = KotlinLogging.logger {}

@@ -32,12 +32,10 @@ class TextTemplatePluginFactory(
     private val processDocumentService: ProcessDocumentService,
     private val storageService: TemporaryResourceStorageService,
 ) : PluginFactory<TextTemplatePlugin>(pluginService) {
-
-    override fun create(): TextTemplatePlugin {
-        return TextTemplatePlugin(
+    override fun create(): TextTemplatePlugin =
+        TextTemplatePlugin(
             templateService,
             processDocumentService,
             storageService,
         )
-    }
 }

@@ -26,7 +26,6 @@ import org.springframework.context.annotation.Bean
 
 @AutoConfiguration
 class MailTemplateAutoConfiguration {
-
     @Bean
     @ConditionalOnMissingBean(MailTemplatePluginFactory::class)
     fun mailTemplatePluginFactory(
@@ -34,13 +33,11 @@ class MailTemplateAutoConfiguration {
         templateService: TemplateService,
         processDocumentService: ProcessDocumentService,
         storageService: TemporaryResourceStorageService,
-    ): MailTemplatePluginFactory {
-        return MailTemplatePluginFactory(
+    ): MailTemplatePluginFactory =
+        MailTemplatePluginFactory(
             pluginService,
             templateService,
             processDocumentService,
             storageService,
         )
-    }
-
 }

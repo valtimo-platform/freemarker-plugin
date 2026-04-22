@@ -27,7 +27,6 @@ import org.springframework.context.annotation.Bean
 
 @AutoConfiguration
 class DocumentGeneratorAutoConfiguration {
-
     @Bean
     @ConditionalOnMissingBean(DocumentGeneratorPluginFactory::class)
     fun documentGeneratorPluginFactory(
@@ -35,25 +34,22 @@ class DocumentGeneratorAutoConfiguration {
         templateService: TemplateService,
         processDocumentService: ProcessDocumentService,
         storageService: TemporaryResourceStorageService,
-    ): DocumentGeneratorPluginFactory {
-        return DocumentGeneratorPluginFactory(
+    ): DocumentGeneratorPluginFactory =
+        DocumentGeneratorPluginFactory(
             pluginService,
             templateService,
             processDocumentService,
             storageService,
         )
-    }
 
     @Bean
     @ConditionalOnMissingBean(DocumentGeneratorResource::class)
     fun documentGeneratorResource(
         templateService: TemplateService,
         pluginService: PluginService,
-    ): DocumentGeneratorResource {
-        return DocumentGeneratorResource(
+    ): DocumentGeneratorResource =
+        DocumentGeneratorResource(
             templateService,
             pluginService,
         )
-    }
-
 }

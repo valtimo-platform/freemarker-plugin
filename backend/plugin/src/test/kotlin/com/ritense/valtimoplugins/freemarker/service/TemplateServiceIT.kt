@@ -16,6 +16,7 @@
 
 package com.ritense.valtimoplugins.freemarker.service
 
+import com.ritense.valtimo.contract.case_.CaseDefinitionId
 import com.ritense.valtimoplugins.freemarker.BaseIntegrationTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -25,7 +26,6 @@ import kotlin.test.assertEquals
 
 @Transactional
 class TemplateServiceIT : BaseIntegrationTest() {
-
     @Autowired
     lateinit var templateService: TemplateService
 
@@ -35,12 +35,17 @@ class TemplateServiceIT : BaseIntegrationTest() {
 
     @Test
     fun `find a list of possible placeholders`() {
-        val template = templateService.getTemplate("placeholder-test-template", null, "mail")
+        val template =
+            templateService.getTemplate(
+                "placeholder-test-template",
+                CaseDefinitionId("profile", "1.0.0"),
+                "mail",
+            )
 
-        val placeholders = templateService.findPlaceholders(template)
+        val placeholders = templateService.findPlaceholders(template.content).keys
 
         assertEquals(
-            listOf(
+            setOf(
                 "doc:lastname",
                 "doc:houseNumber",
                 "case:createdBy",
@@ -49,9 +54,9 @@ class TemplateServiceIT : BaseIntegrationTest() {
                 "case:definitionId.version",
                 "case:id",
                 "case:sequence",
-                "case:version"
-            ), placeholders
+                "case:version",
+            ),
+            placeholders,
         )
     }
-
 }
