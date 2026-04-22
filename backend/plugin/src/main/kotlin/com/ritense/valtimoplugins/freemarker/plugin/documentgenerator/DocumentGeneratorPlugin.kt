@@ -122,16 +122,14 @@ open class DocumentGeneratorPlugin(
             val reader = StringReader(csvString)
 
             val parser =
-                CSVParser
-                    .builder()
-                    .setReader(reader)
-                    .setFormat(
-                        CSVFormat.TDF
-                            .builder()
-                            .setHeader()
-                            .setSkipHeaderRecord(true)
-                            .get(),
-                    ).get()
+                CSVParser.parse(
+                    reader,
+                    CSVFormat.TDF
+                        .builder()
+                        .setHeader()
+                        .setSkipHeaderRecord(true)
+                        .build(),
+                )
             val headers = parser.headerNames
 
             val printer =
@@ -140,7 +138,7 @@ open class DocumentGeneratorPlugin(
                     CSVFormat.TDF
                         .builder()
                         .setHeader(*headers.toTypedArray())
-                        .get(),
+                        .build(),
                 )
             parser.forEach { record ->
                 printer.printRecord(headers.map { record[it] })

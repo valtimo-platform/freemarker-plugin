@@ -66,7 +66,6 @@ class TemplateDeploymentService(
 
             templateService.saveTemplate(
                 templateKey = template.templateKey,
-                caseDefinitionName = template.caseDefinitionName,
                 templateType = template.templateType,
                 metadata = template.metadata ?: emptyMap(),
                 content = content,
@@ -78,20 +77,19 @@ class TemplateDeploymentService(
 
     @Cacheable(
         value = [TEMPLATE_EXISTS_CACHE_NAME],
-        key = "{ #template.key, #template.caseDefinitionName, #template.type }",
+        key = "{ #template.key, #template.caseDefinitionId, #template.type }",
     )
     fun deploymentFileExists(template: ValtimoTemplate) =
-        deploymentFileExists(template.key, template.caseDefinitionName, template.type)
+        deploymentFileExists(template.key, template.type)
 
-    @Cacheable(value = [TEMPLATE_EXISTS_CACHE_NAME], key = "{ #templateKey, #caseDefinitionName, #templateType }")
+    @Cacheable(value = [TEMPLATE_EXISTS_CACHE_NAME], key = "{ #templateKey, #templateType }")
     fun deploymentFileExists(
         templateKey: String,
-        caseDefinitionName: String?,
         templateType: String,
     ): Boolean =
         loadResources().any { resource ->
             val template = objectMapper.readValue<TemplateDeploymentMetadata>(resource.inputStream)
-            template.templateKey == templateKey && template.caseDefinitionName == caseDefinitionName
+            template.templateKey == templateKey
         }
 
     // Note: This function is slow. It will scan through the entire jar including jars from dependencies for a '*.template.json'
