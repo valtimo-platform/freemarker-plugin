@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+val apacheCommonsCsvVersion: String by project
+val flyingSaucerPdfVersion: String by project
 val freemarkerVersion: String by project
 val kotlinLoggingVersion: String by project
 val mockitoKotlinVersion: String by project
@@ -43,6 +45,8 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-security")
 
     implementation("org.freemarker:freemarker:$freemarkerVersion")
+    implementation("org.apache.commons:commons-csv:$apacheCommonsCsvVersion")
+    implementation("org.xhtmlrenderer:flying-saucer-pdf:$flyingSaucerPdfVersion")
 
     compileOnly("io.github.oshai:kotlin-logging-jvm:$kotlinLoggingVersion")
 
