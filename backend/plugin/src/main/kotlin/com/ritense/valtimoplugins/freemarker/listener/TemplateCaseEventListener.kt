@@ -34,7 +34,6 @@ class TemplateCaseEventListener(
     private val service: TemplateService,
     private val repository: TemplateRepository,
 ) {
-
     @RunWithoutAuthorization
     @EventListener(CaseDefinitionCreatedEvent::class)
     fun handleCaseDefinitionCreatedEvent(event: CaseDefinitionCreatedEvent) {
@@ -47,7 +46,7 @@ class TemplateCaseEventListener(
                         type = oldTemplate.type,
                         metadata = oldTemplate.metadata,
                         content = oldTemplate.content,
-                    )
+                    ),
                 )
             }
         }

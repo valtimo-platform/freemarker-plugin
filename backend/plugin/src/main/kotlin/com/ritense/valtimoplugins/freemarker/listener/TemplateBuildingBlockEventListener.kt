@@ -33,22 +33,24 @@ class TemplateBuildingBlockEventListener(
     private val service: TemplateService,
     private val repository: TemplateRepository,
 ) {
-
     @RunWithoutAuthorization
     @EventListener(BuildingBlockDefinitionCreatedEvent::class)
     fun handleBuildingBlockDefinitionCreatedEvent(event: BuildingBlockDefinitionCreatedEvent) {
         if (event.duplicate) {
-            service.findTemplates(buildingBlockDefinitionId = event.basedOnBuildingBlockDefinitionId!!).forEach { oldTemplate ->
-                repository.save(
-                    ValtimoTemplate(
-                        key = oldTemplate.key,
-                        buildingBlockDefinitionId = event.buildingBlockDefinitionId,
-                        type = oldTemplate.type,
-                        metadata = oldTemplate.metadata,
-                        content = oldTemplate.content,
+            service
+                .findTemplates(
+                    buildingBlockDefinitionId = event.basedOnBuildingBlockDefinitionId!!,
+                ).forEach { oldTemplate ->
+                    repository.save(
+                        ValtimoTemplate(
+                            key = oldTemplate.key,
+                            buildingBlockDefinitionId = event.buildingBlockDefinitionId,
+                            type = oldTemplate.type,
+                            metadata = oldTemplate.metadata,
+                            content = oldTemplate.content,
+                        ),
                     )
-                )
-            }
+                }
         }
     }
 }
