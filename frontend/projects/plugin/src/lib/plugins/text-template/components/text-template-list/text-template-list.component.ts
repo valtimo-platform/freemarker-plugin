@@ -15,15 +15,36 @@
  */
 
 import {ChangeDetectionStrategy, Component, OnInit, ViewChild,} from '@angular/core';
-import {BehaviorSubject, filter, map, Observable, switchMap, take} from 'rxjs';
+import {BehaviorSubject, combineLatest, filter, map, merge, Observable, startWith, switchMap, take} from 'rxjs';
 import {ActivatedRoute, Router} from '@angular/router';
-import {CarbonListComponent, ColumnConfig, ViewType} from '@valtimo/components';
+import {CarbonListComponent, CarbonListModule, ColumnConfig, ViewType} from '@valtimo/components';
 import {FreemarkerTemplateManagementService} from '../../../../services';
 import {TemplateListItem} from '../../../../models';
+import {
+    BuildingBlockManagementParams,
+    CaseManagementParams,
+    EnvironmentService,
+    getBuildingBlockManagementRouteParams,
+    getCaseManagementRouteParams
+} from '@valtimo/shared';
+import {CommonModule} from '@angular/common';
+import {ButtonModule} from 'carbon-components-angular';
+import {TranslateModule} from '@ngx-translate/core';
+import {TextTemplateDeleteModalComponent} from '../text-template-delete-modal/text-template-delete-modal.component';
+import {TextTemplateAddEditModalComponent} from '../text-template-add-edit-modal/text-template-add-edit-modal.component';
 
 @Component({
+    standalone: true,
     templateUrl: './text-template-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        CommonModule,
+        CarbonListModule,
+        ButtonModule,
+        TranslateModule,
+        TextTemplateDeleteModalComponent,
+        TextTemplateAddEditModalComponent
+    ]
 })
 export class TextTemplateListComponent implements OnInit {
     @ViewChild(CarbonListComponent) carbonList: CarbonListComponent;
@@ -41,21 +62,41 @@ export class TextTemplateListComponent implements OnInit {
         },
     ];
 
-    private readonly _caseDefinitionName$: Observable<string> = this.route.params.pipe(
-        map(params => params?.name),
-        filter(caseDefinitionName => !!caseDefinitionName),
+    private readonly _caseDefinitionId$: Observable<CaseManagementParams> = getCaseManagementRouteParams(this.route).pipe(
+        filter((params: CaseManagementParams | undefined) => !!params?.caseDefinitionKey),
+    );
+
+    private readonly _buildingBlockDefinitionId$: Observable<BuildingBlockManagementParams> = getBuildingBlockManagementRouteParams(this.route).pipe(
+        filter((params: BuildingBlockManagementParams | undefined) => !!params?.buildingBlockDefinitionKey),
+    );
+
+    private readonly _params$: Observable<{case?: CaseManagementParams, buildingBlock?: BuildingBlockManagementParams}> = merge(
+        this._caseDefinitionId$.pipe(map(params => ({case: params}))),
+        this._buildingBlockDefinitionId$.pipe(map(params => ({buildingBlock: params})))
+    );
+
+    public readonly readOnly$: Observable<boolean> = this._params$.pipe(
+        switchMap(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) => combineLatest([
+                this.environmentService.canUpdateGlobalConfiguration(),
+                this.templateService.isFinal(caseDefinitionId, buildingBlockDefinitionId)
+            ]).pipe(
+                map(([canUpdateGlobal, isFinalCase]) => !canUpdateGlobal || isFinalCase),
+                startWith(true)
+            )
+        )
     );
 
     public readonly templates$ = new BehaviorSubject<TemplateListItem[] | null>(null);
     public readonly showAddModal$ = new BehaviorSubject<boolean>(false);
     public readonly showDeleteModal$ = new BehaviorSubject<boolean>(false);
-    public readonly selectedRowKeys$ = new BehaviorSubject<Array<string>>([]);
+    public readonly selectedRowKeys$ = new BehaviorSubject<Array<any>>([]);
     public readonly loading$ = new BehaviorSubject<boolean>(true);
 
     constructor(
         private readonly templateService: FreemarkerTemplateManagementService,
         private readonly router: Router,
-        private readonly route: ActivatedRoute
+        private readonly route: ActivatedRoute,
+        private readonly environmentService: EnvironmentService,
     ) {
     }
 
@@ -73,12 +114,24 @@ export class TextTemplateListComponent implements OnInit {
             return;
         }
 
-        this._caseDefinitionName$.pipe(
+        this._params$.pipe(
             take(1),
-            switchMap(caseDefinitionName => this.templateService.addTemplate({caseDefinitionName, type: 'text', ...data}))
+            switchMap(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) => this.templateService.addTemplate({
+                caseDefinitionKey: caseDefinitionId?.caseDefinitionKey,
+                caseDefinitionVersionTag: caseDefinitionId?.caseDefinitionVersionTag,
+                buildingBlockDefinitionKey: buildingBlockDefinitionId?.buildingBlockDefinitionKey,
+                buildingBlockDefinitionVersionTag: buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
+                type: 'text', ...data
+            }))
         ).subscribe(template => {
             this.showAddModal$.next(false);
-            this.gotoTextTemplateEditor(template.caseDefinitionName, template.key);
+            this.gotoTextTemplateEditor(
+                template.caseDefinitionKey,
+                template.caseDefinitionVersionTag,
+                template.buildingBlockDefinitionKey,
+                template.buildingBlockDefinitionVersionTag,
+                template.key
+            );
         });
     }
 
@@ -87,30 +140,52 @@ export class TextTemplateListComponent implements OnInit {
         this.showDeleteModal$.next(true);
     }
 
-    public onDelete(templates: Array<string>): void {
+    public onDelete(templates: Array<any>): void {
         this.loading$.next(true);
-        this._caseDefinitionName$.pipe(
+        this._params$.pipe(
             take(1),
-            switchMap(caseDefinitionName => this.templateService.deleteTemplates({caseDefinitionName, type: 'text', templates})),
+            switchMap(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) => this.templateService.deleteTemplates({
+                caseDefinitionKey: caseDefinitionId?.caseDefinitionKey,
+                caseDefinitionVersionTag: caseDefinitionId?.caseDefinitionVersionTag,
+                buildingBlockDefinitionKey: buildingBlockDefinitionId?.buildingBlockDefinitionKey,
+                buildingBlockDefinitionVersionTag: buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
+                templates
+            })),
         ).subscribe(_ => {
             this.reloadTemplateList();
         });
     }
 
     public onRowClick(template: TemplateListItem): void {
-        this._caseDefinitionName$.pipe(take(1)).subscribe(caseDefinitionName =>
-            this.gotoTextTemplateEditor(caseDefinitionName, template.key)
+        this._params$.pipe(take(1)).subscribe(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) =>
+            this.gotoTextTemplateEditor(
+                caseDefinitionId?.caseDefinitionKey,
+                caseDefinitionId?.caseDefinitionVersionTag,
+                buildingBlockDefinitionId?.buildingBlockDefinitionKey,
+                buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
+                template.key
+            )
         );
     }
 
-    private gotoTextTemplateEditor(caseDefinitionName: string, key: string): void {
-        this.router.navigate([`/dossier-management/dossier/${caseDefinitionName}/text-template/${key}`])
+    private gotoTextTemplateEditor(
+        caseDefinitionKey: string,
+        caseDefinitionVersionTag: string,
+        buildingBlockDefinitionKey: string,
+        buildingBlockDefinitionVersionTag: string,
+        key: string
+    ): void {
+        if (caseDefinitionKey) {
+            this.router.navigate([`/case-management/case/${caseDefinitionKey}/version/${caseDefinitionVersionTag}/text-template/${key}`]);
+        } else {
+            this.router.navigate([`/building-block-management/building-block/${buildingBlockDefinitionKey}/version/${buildingBlockDefinitionVersionTag}/text-template/${key}`]);
+        }
     }
 
     private reloadTemplateList(): void {
         this.loading$.next(true);
-        this._caseDefinitionName$.pipe(
-            switchMap(caseDefinitionName => this.templateService.getAllTextTemplates(caseDefinitionName)),
+        this._params$.pipe(
+            switchMap(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) => this.templateService.getAllTextTemplates(caseDefinitionId, buildingBlockDefinitionId)),
             map(templatePage => templatePage.content),
             take(1)
         ).subscribe(templateListItems => {
@@ -120,6 +195,6 @@ export class TextTemplateListComponent implements OnInit {
     }
 
     private setSelectedTemplateKeys(): void {
-        this.selectedRowKeys$.next(this.carbonList.selectedItems.map((template: TemplateListItem) => template.key));
+        this.selectedRowKeys$.next(this.carbonList.selectedItems.map((template: TemplateListItem) => ({key: template.key, type: template.type})));
     }
 }

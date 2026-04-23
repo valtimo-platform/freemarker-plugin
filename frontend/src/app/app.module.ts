@@ -20,6 +20,8 @@ import {AnalyseModule} from "@valtimo/analyse";
 import {AppComponent} from "./app.component";
 import {AppRoutingModule} from "./app-routing.module";
 import {
+  DocumentenApiPluginModule, documentenApiPluginSpecification,
+  ZakenApiPluginModule, zakenApiPluginSpecification,
   PLUGINS_TOKEN,
 } from "@valtimo/plugin";
 import {BootstrapModule} from "@valtimo/bootstrap";
@@ -73,9 +75,17 @@ import {SwaggerModule} from "@valtimo/swagger";
 import {TaskModule} from "@valtimo/task";
 import {TeamsModule} from "@valtimo/teams";
 import {TranslateLoader, TranslateModule} from "@ngx-translate/core";
+import {ZgwModule} from '@valtimo/zgw';
 import {environment} from "../environments/environment";
 
-import {TemplateManagementRoutingModule, mailTemplatePluginSpecification,} from "@valtimo-plugins/freemarker";
+import {
+  DocumentGeneratorPluginModule,
+  MailTemplatePluginModule,
+  TextTemplatePluginModule,
+  documentGeneratorPluginSpecification,
+  mailTemplatePluginSpecification,
+  textTemplatePluginSpecification,
+} from "@valtimo-plugins/freemarker";
 
 export function tabsFactory() {
   return new Map<string, object>([
@@ -108,6 +118,7 @@ export function tabsFactory() {
     DashboardModule,
     DecisionModule,
     DocumentModule,
+    DocumentenApiPluginModule,
     FormManagementModule,
     FormModule,
     FormsModule,
@@ -124,7 +135,9 @@ export function tabsFactory() {
     ProcessModule,
     ReactiveFormsModule,
     ResourceModule,
-    TemplateManagementRoutingModule,
+    DocumentGeneratorPluginModule,
+    MailTemplatePluginModule,
+    TextTemplatePluginModule,
     SecurityModule,
     SseModule,
     SwaggerModule,
@@ -140,12 +153,18 @@ export function tabsFactory() {
     TranslationManagementModule,
     ValuePathSelectorComponent,
     WidgetModule,
+    ZakenApiPluginModule,
+    ZgwModule,
   ],
   providers: [
     {
       provide: PLUGINS_TOKEN,
       useValue: [
+        documentGeneratorPluginSpecification,
+        documentenApiPluginSpecification,
         mailTemplatePluginSpecification,
+        textTemplatePluginSpecification,
+        zakenApiPluginSpecification,
       ],
     },
   ],

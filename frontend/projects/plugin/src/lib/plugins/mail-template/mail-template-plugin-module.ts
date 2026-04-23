@@ -14,22 +14,56 @@
  * limitations under the License.
  */
 
-import {NgModule} from '@angular/core';
-import {MailTemplateConfigurationComponent} from './components/mail-template-configuration/mail-template-configuration.component';
-import {CommonModule} from '@angular/common';
-import {PluginTranslatePipeModule} from '@valtimo/plugin';
+import { NgModule } from "@angular/core";
+import { MailTemplateConfigurationComponent } from "./components/mail-template-configuration/mail-template-configuration.component";
+import { CommonModule } from "@angular/common";
+import { PluginManagementService, PluginTranslatePipeModule } from "@valtimo/plugin";
 import {
-    CarbonListModule,
-    ConfirmationModalModule,
-    EditorModule,
+  CarbonListModule,
+  ConfirmationModalModule,
+  EditorModule,
+  FormModule,
+  InputModule as ValtimoInputModule,
+  ParagraphModule,
+  RenderInPageHeaderDirective,
+  SelectModule,
+} from "@valtimo/components";
+import { GenerateMailContentComponent } from "./components/generate-mail-content/generate-mail-content.component";
+import { GenerateMailFileComponent } from "./components/generate-mail-file/generate-mail-file.component";
+import {
+  ButtonModule,
+  DialogModule,
+  DropdownModule,
+  IconModule,
+  InputModule,
+  LoadingModule,
+  ModalModule,
+  NotificationModule,
+  TabsModule,
+} from "carbon-components-angular";
+import { BUILDING_BLOCK_MANAGEMENT_TAB_TOKEN, CASE_MANAGEMENT_TAB_TOKEN } from "@valtimo/shared";
+import { MailTemplateListComponent } from "./components/mail-template-list/mail-template-list.component";
+import { TranslateModule } from "@ngx-translate/core";
+import { ReactiveFormsModule } from "@angular/forms";
+import { TemplateManagementRoutingModule } from "./mail-template-management-routing.module";
+import { MailTemplateDeleteModalComponent } from "./components/mail-template-delete-modal/mail-template-delete-modal.component";
+import { catchError, map, of } from "rxjs";
+
+@NgModule({
+  declarations: [MailTemplateConfigurationComponent, GenerateMailFileComponent, GenerateMailContentComponent],
+  imports: [
+    CommonModule,
+    PluginTranslatePipeModule,
+    TemplateManagementRoutingModule,
     FormModule,
-    InputModule as ValtimoInputModule,
-    ParagraphModule, RenderInPageHeaderDirectiveModule,
+    ParagraphModule,
     SelectModule,
-} from '@valtimo/components';
-import {GenerateMailContentComponent} from './components/generate-mail-content/generate-mail-content.component';
-import {GenerateMailFileComponent} from './components/generate-mail-file/generate-mail-file.component';
-import {
+    ConfirmationModalModule,
+    TranslateModule,
+    ReactiveFormsModule,
+    CarbonListModule,
+    EditorModule,
+    ValtimoInputModule,
     ButtonModule,
     DialogModule,
     DropdownModule,
@@ -37,69 +71,41 @@ import {
     InputModule,
     LoadingModule,
     ModalModule,
-    NotificationModule, TabsModule,
-} from 'carbon-components-angular';import {CASE_MANAGEMENT_TAB_TOKEN} from '@valtimo/config';
-import {MailTemplateListComponent} from './components/mail-template-list/mail-template-list.component';
-import {MailTemplateAddEditModalComponent} from './components/mail-template-add-edit-modal/mail-template-add-edit-modal.component';
-import {MailTemplateEditorComponent} from './components/mail-template-editor/mail-template-editor.component';
-import {MailTemplateDeleteModalComponent} from './components/mail-template-delete-modal/mail-template-delete-modal.component';
-import {TranslateModule} from '@ngx-translate/core';
-import {ReactiveFormsModule} from '@angular/forms';
-import {TemplateManagementRoutingModule} from './mail-template-management-routing.module';
-
-@NgModule({
-    declarations: [
-        MailTemplateConfigurationComponent,
-        GenerateMailFileComponent,
-        GenerateMailContentComponent,
-        MailTemplateAddEditModalComponent,
-        MailTemplateEditorComponent,
-        MailTemplateDeleteModalComponent,
-        MailTemplateListComponent,
-    ],
-    imports: [
-        CommonModule,
-        PluginTranslatePipeModule,
-        TemplateManagementRoutingModule,
-        FormModule,
-        ParagraphModule,
-        SelectModule,
-        ConfirmationModalModule,
-        TranslateModule,
-        ReactiveFormsModule,
-        CarbonListModule,
-        EditorModule,
-        ValtimoInputModule,
-        ButtonModule,
-        DialogModule,
-        DropdownModule,
-        IconModule,
-        InputModule,
-        LoadingModule,
-        ModalModule,
-        NotificationModule,
-        RenderInPageHeaderDirectiveModule,
-        TabsModule,
-    ],
-    exports: [
-        MailTemplateConfigurationComponent,
-        GenerateMailFileComponent,
-        GenerateMailContentComponent,
-        MailTemplateAddEditModalComponent,
-        MailTemplateEditorComponent,
-        MailTemplateDeleteModalComponent,
-        MailTemplateListComponent,
-    ],
-    providers: [
-        {
-            provide: CASE_MANAGEMENT_TAB_TOKEN,
-            useValue: {
-                translationKey: 'Mail templates',
-                component: MailTemplateListComponent,
-            },
-            multi: true,
-        }
-    ]
+    NotificationModule,
+    RenderInPageHeaderDirective,
+    TabsModule,
+    MailTemplateDeleteModalComponent,
+  ],
+  exports: [MailTemplateConfigurationComponent, GenerateMailFileComponent, GenerateMailContentComponent],
+  providers: [
+    {
+      provide: CASE_MANAGEMENT_TAB_TOKEN,
+      useFactory: (pluginManagementService: PluginManagementService) => ({
+        translationKey: "Mail template",
+        component: MailTemplateListComponent,
+        tabRoute: "mail-template",
+        enabled$: pluginManagementService.getAllPluginConfigurations().pipe(
+          map((pluginConfigs) => pluginConfigs.find((pluginConfig) => pluginConfig.pluginDefinition?.key === "mail-template")),
+          catchError(() => of(false)),
+        ),
+      }),
+      deps: [PluginManagementService],
+      multi: true,
+    },
+    {
+      provide: BUILDING_BLOCK_MANAGEMENT_TAB_TOKEN,
+      useFactory: (pluginManagementService: PluginManagementService) => ({
+        translationKey: "Mail template",
+        component: MailTemplateListComponent,
+        tabRoute: "mail-template",
+        enabled$: pluginManagementService.getAllPluginConfigurations().pipe(
+          map((pluginConfigs) => pluginConfigs.find((pluginConfig) => pluginConfig.pluginDefinition?.key === "mail-template")),
+          catchError(() => of(false)),
+        ),
+      }),
+      deps: [PluginManagementService],
+      multi: true,
+    },
+  ],
 })
-export class MailTemplatePluginModule {
-}
+export class MailTemplatePluginModule {}

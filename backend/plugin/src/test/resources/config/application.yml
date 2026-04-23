@@ -2,7 +2,7 @@ spring:
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:54342/freemarker-test
+    url: jdbc:postgresql://localhost:54367/freemarker-test
     username: test-user
     password: password
     hikari:

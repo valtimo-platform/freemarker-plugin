@@ -79,8 +79,7 @@ class TemplateDeploymentService(
         value = [TEMPLATE_EXISTS_CACHE_NAME],
         key = "{ #template.key, #template.caseDefinitionId, #template.type }",
     )
-    fun deploymentFileExists(template: ValtimoTemplate) =
-        deploymentFileExists(template.key, template.type)
+    fun deploymentFileExists(template: ValtimoTemplate) = deploymentFileExists(template.key, template.type)
 
     @Cacheable(value = [TEMPLATE_EXISTS_CACHE_NAME], key = "{ #templateKey, #templateType }")
     fun deploymentFileExists(

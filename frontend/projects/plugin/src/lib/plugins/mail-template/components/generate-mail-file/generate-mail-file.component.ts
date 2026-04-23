@@ -15,15 +15,21 @@
  */
 
 import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
-import {FunctionConfigurationComponent} from '@valtimo/plugin';
-import {BehaviorSubject, combineLatest, map, Observable, of, Subscription, switchMap, take, tap} from 'rxjs';
+import {FunctionConfigurationComponent, FunctionConfigurationData} from '@valtimo/plugin';
+import {BehaviorSubject, combineLatest, filter, map, merge, Observable, of, Subject, Subscription, switchMap, take, takeUntil, tap} from 'rxjs';
 import {GenerateMailFileConfig} from '../../models';
-import {FunctionConfigurationData} from '@valtimo/plugin/lib/models/plugin';
-import {ModalService, SelectItem} from '@valtimo/components';
-import {DocumentService} from '@valtimo/document';
+import {SelectItem} from '@valtimo/components';
 import {FreemarkerTemplateManagementService} from '../../../../services';
+import {
+  BuildingBlockManagementParams,
+  CaseManagementParams,
+  getBuildingBlockManagementRouteParams,
+  ManagementContext
+} from '@valtimo/shared';
+import {ActivatedRoute} from '@angular/router';
 
 @Component({
+    standalone: false,
     selector: 'valtimo-generate-mail-file-configuration',
     templateUrl: './generate-mail-file.component.html',
 })
@@ -32,58 +38,37 @@ export class GenerateMailFileComponent
     @Input() save$!: Observable<void>;
     @Input() disabled$!: Observable<boolean>;
     @Input() pluginId!: string;
+    @Input() context$: Observable<[ManagementContext, CaseManagementParams]>;
     @Input() prefillConfiguration$!: Observable<GenerateMailFileConfig>;
     @Output() valid: EventEmitter<boolean> = new EventEmitter<boolean>();
     @Output() configuration: EventEmitter<FunctionConfigurationData> = new EventEmitter<FunctionConfigurationData>();
 
-    private saveSubscription!: Subscription;
+    private readonly buildingBlockParams$ = getBuildingBlockManagementRouteParams(this.route);
     private readonly formValue$ = new BehaviorSubject<GenerateMailFileConfig | null>(null);
     private readonly valid$ = new BehaviorSubject<boolean>(false);
+    private _subscriptions = new Subscription();
 
     readonly loading$ = new BehaviorSubject<boolean>(true);
 
-    readonly mailTemplateItems$: Observable<Array<SelectItem>> = this.modalService.modalData$.pipe(
-        switchMap(params =>
-            this.documentService.findProcessDocumentDefinitionsByProcessDefinitionKey(
-                params?.processDefinitionKey
-            )
-        ),
-        switchMap(processDocumentDefinitions =>
-            combineLatest([
-                of({content: []}),
-                ...processDocumentDefinitions.map(processDocumentDefinition =>
-                    this.templateService.getAllMailTemplates(
-                        processDocumentDefinition.id.documentDefinitionId.name
-                    )
-                ),
-            ])
-        ),
-        map(results => {
-            return results
-                .flatMap(result => result.content)
-                .map(template => ({
-                    id: template.key,
-                    text: template.key,
-                }));
-        }),
-        tap(() => {
-            this.loading$.next(false);
-        })
-    );
+    readonly mailTemplateItems$ = new BehaviorSubject<Array<SelectItem>>([]);
+
+    private readonly _destroy$ = new Subject<void>();
 
     constructor(
-        private readonly modalService: ModalService,
-        private readonly documentService: DocumentService,
-        private readonly templateService: FreemarkerTemplateManagementService
+        private readonly templateService: FreemarkerTemplateManagementService,
+        private readonly route: ActivatedRoute
     ) {
     }
 
     ngOnInit(): void {
         this.openSaveSubscription();
+        this.initContextHandling();
     }
 
     ngOnDestroy(): void {
-        this.saveSubscription?.unsubscribe();
+        this._subscriptions.unsubscribe();
+        this._destroy$.next();
+        this._destroy$.complete();
     }
 
     formValueChange(formValue: GenerateMailFileConfig): void {
@@ -99,7 +84,7 @@ export class GenerateMailFileComponent
     }
 
     private openSaveSubscription(): void {
-        this.saveSubscription = this.save$?.subscribe(save => {
+        const saveSubscription = this.save$?.subscribe(save => {
             combineLatest([this.formValue$, this.valid$])
                 .pipe(take(1))
                 .subscribe(([formValue, valid]) => {
@@ -108,5 +93,41 @@ export class GenerateMailFileComponent
                     }
                 });
         });
+        this._subscriptions.add(saveSubscription);
     }
+
+    private initContextHandling(): void {
+        const caseParams$ = this.context$.pipe(
+            filter(([managementContext, caseParams]) => managementContext === 'case' && !!caseParams?.caseDefinitionKey),
+            map(([managementContext, caseParams]) => ({managementContext, caseParams}))
+        );
+
+        const buildingBlockParams$ = this.buildingBlockParams$.pipe(
+            filter(buildingBlockParams => !!buildingBlockParams?.buildingBlockDefinitionKey),
+            map(buildingBlockParams => ({managementContext: 'buildingBlock' as ManagementContext, buildingBlockParams}))
+        );
+
+        merge(caseParams$, buildingBlockParams$).pipe(
+            filter(params => !!params),
+            switchMap(params => {
+                if (params!.managementContext === 'case') {
+                    return this.templateService.getAllMailTemplates((params as any).caseParams, null);
+                } else if (params!.managementContext === 'buildingBlock') {
+                    return this.templateService.getAllMailTemplates(null, (params as any).buildingBlockParams);
+                } else {
+                    console.error(`Freemarker plugin does not support '${params!.managementContext}' templates`);
+                    return of(null);
+                }
+            }),
+            map(results =>
+                results?.content.map(template => ({
+                    id: template.key,
+                    text: template.key,
+                })) || []
+            ),
+            tap(() => this.loading$.next(false)),
+            takeUntil(this._destroy$)
+        ).subscribe(results => this.mailTemplateItems$.next(results));
+    }
+
 }

@@ -15,10 +15,18 @@
  */
 
 import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {Observable} from 'rxjs';
-import {DeleteTemplatesRequest, Template, TemplateListItem, TemplateResponse, TemplateType, UpdateTemplateRequest,} from '../models';
-import {ConfigService, Page} from '@valtimo/config';
+import {HttpClient, HttpHeaders} from '@angular/common/http';
+import {map, Observable} from 'rxjs';
+import {
+    DeleteTemplatesRequest,
+    Template,
+    TemplateListItem,
+    TemplatePreviewRequest,
+    TemplateResponse,
+    TemplateType,
+    UpdateTemplateRequest,
+} from '../models';
+import {BuildingBlockManagementParams, CaseManagementParams, ConfigService, InterceptorSkip, Page} from '@valtimo/shared';
 
 @Injectable({
     providedIn: 'root',
@@ -34,24 +42,38 @@ export class FreemarkerTemplateManagementService {
         this.valtimoEndpointUri = `${this.configService.config.valtimoApi.endpointUri}management/`;
     }
 
-    public getAllMailTemplates(caseDefinitionName?: string): Observable<Page<TemplateListItem>> {
-        return this.getTemplates(caseDefinitionName, 'mail', undefined, 0, 10000);
+    public getAllMailTemplates(caseParam: CaseManagementParams = null, buildingBlock: BuildingBlockManagementParams = null): Observable<Page<TemplateListItem>> {
+        return this.getTemplates(caseParam, buildingBlock, 'mail', undefined, undefined, 0, 10000);
     }
 
-    public getAllTextTemplates(caseDefinitionName?: string): Observable<Page<TemplateListItem>> {
-        return this.getTemplates(caseDefinitionName, 'text', undefined, 0, 10000);
+    public getAllTextTemplates(caseParam: CaseManagementParams = null, buildingBlock: BuildingBlockManagementParams = null): Observable<Page<TemplateListItem>> {
+        return this.getTemplates(caseParam, buildingBlock, 'text', undefined, undefined, 0, 10000);
+    }
+
+    public getAllDocumentTemplates(caseParam: CaseManagementParams = null, buildingBlock: BuildingBlockManagementParams = null): Observable<Page<TemplateListItem>> {
+        return this.getTemplates(caseParam, buildingBlock, undefined, ['csv', 'pdf'], undefined, 0, 10000);
+    }
+
+    public getAllTemplates(caseParam: CaseManagementParams = null, buildingBlock: BuildingBlockManagementParams = null, templateType?: TemplateType): Observable<Page<TemplateListItem>> {
+        return this.getTemplates(caseParam, buildingBlock, templateType, undefined, undefined, 0, 10000);
     }
 
     public getTemplates(
-        caseDefinitionName?: string,
+        caseParam: CaseManagementParams,
+        buildingBlock: BuildingBlockManagementParams,
         templateType?: TemplateType,
+        templateTypes?: TemplateType[],
         templateKey?: string,
         page?: number,
         pageSize?: number,
     ): Observable<Page<TemplateListItem>> {
         const params = {
-            caseDefinitionName,
+            caseDefinitionKey: caseParam?.caseDefinitionKey,
+            caseDefinitionVersionTag: caseParam?.caseDefinitionVersionTag,
+            buildingBlockDefinitionKey: buildingBlock?.buildingBlockDefinitionKey,
+            buildingBlockDefinitionVersionTag: buildingBlock?.buildingBlockDefinitionVersionTag,
             templateType,
+            templateTypes,
             templateKey,
             page,
             size: pageSize
@@ -67,17 +89,31 @@ export class FreemarkerTemplateManagementService {
         );
     }
 
-    public getMailTemplate(caseDefinitionName: string, key: string): Observable<TemplateResponse> {
-        return this.getTemplate(caseDefinitionName, 'mail', key);
+    public getMailTemplate(caseParam: CaseManagementParams, buildingBlock: BuildingBlockManagementParams, key: string): Observable<TemplateResponse> {
+        return this.getTemplate(caseParam, buildingBlock, 'mail', key);
     }
 
-    public getTextTemplate(caseDefinitionName: string, key: string): Observable<TemplateResponse> {
-        return this.getTemplate(caseDefinitionName, 'text', key);
+    public getTextTemplate(caseParam: CaseManagementParams, buildingBlock: BuildingBlockManagementParams, key: string): Observable<TemplateResponse> {
+        return this.getTemplate(caseParam, buildingBlock, 'text', key);
     }
 
-    public getTemplate(caseDefinitionName: string, templateType: TemplateType, key: string): Observable<TemplateResponse> {
-        return this.http.get<TemplateResponse>(
-            `${this.valtimoEndpointUri}v1/case-definition/${caseDefinitionName}/template-type/${templateType}/template/${key}`
+    public getTemplate(caseParam: CaseManagementParams, buildingBlock: BuildingBlockManagementParams, templateType: TemplateType, key: string): Observable<TemplateResponse> {
+      const params = {
+        caseDefinitionKey: caseParam?.caseDefinitionKey,
+        caseDefinitionVersionTag: caseParam?.caseDefinitionVersionTag,
+        buildingBlockDefinitionKey: buildingBlock?.buildingBlockDefinitionKey,
+        buildingBlockDefinitionVersionTag: buildingBlock?.buildingBlockDefinitionVersionTag,
+        templateType,
+        key
+      };
+      Object.keys(params).forEach(key => {
+        if (params[key] == undefined) {
+          delete params[key];
+        }
+      });
+      return this.http.get<TemplateResponse>(
+            `${this.valtimoEndpointUri}v1/template-type/${templateType}/template/${key}`,
+          {params}
         );
     }
 
@@ -91,5 +127,31 @@ export class FreemarkerTemplateManagementService {
 
     public updateTemplate(template: UpdateTemplateRequest): Observable<TemplateResponse> {
         return this.http.put<TemplateResponse>(`${this.valtimoEndpointUri}v1/template`, template);
+    }
+
+    public previewTemplate(template: TemplatePreviewRequest): Observable<Blob> {
+        return this.http.post(`${this.valtimoEndpointUri}v1/template/preview`, template, {responseType: 'blob'});
+    }
+
+    public isFinal(caseParam: CaseManagementParams = null, buildingBlock: BuildingBlockManagementParams = null): Observable<boolean> {
+      if (caseParam?.caseDefinitionKey) {
+        return this.http
+          .get<any>(
+            `${this.valtimoEndpointUri}v1/case-definition/${caseParam.caseDefinitionKey}/version/${caseParam.caseDefinitionVersionTag}`,
+            {
+              headers: new HttpHeaders().set(InterceptorSkip, '403'),
+            }
+          )
+          .pipe(map(caseDefinition => caseDefinition.final));
+      } else {
+        return this.http
+          .get<any>(
+            `${this.valtimoEndpointUri}v1/building-block/${buildingBlock.buildingBlockDefinitionKey}/version/${buildingBlock.buildingBlockDefinitionVersionTag}`,
+            {
+              headers: new HttpHeaders().set(InterceptorSkip, '403'),
+            }
+          )
+          .pipe(map(buildingBlockDefinition => buildingBlockDefinition.final));
+      }
     }
 }

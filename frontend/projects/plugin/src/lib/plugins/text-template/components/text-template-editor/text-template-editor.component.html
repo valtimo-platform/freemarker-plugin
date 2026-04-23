@@ -24,7 +24,7 @@
     <div class="template-explanation">
         Text Templates use <a target="_blank" href="https://freemarker.apache.org/docs/dgui_quickstart_basics.html">FreeMarker</a>
         to create placeholders inside the text. The data-model for FreeMarker is based upon nested <a
-            target="_blank" href="https://docs.valtimo.nl/reference/modules/value-resolver">Valtimo value-resolvers</a>
+            target="_blank" href="https://docs.valtimo.nl/features/value-resolvers">Valtimo value-resolvers</a>
         with a slightly different notation. For example: $&#123;doc.firstName&#125;. Retrieves
         the `firstName` from the case.
 
@@ -34,7 +34,7 @@
 
     <valtimo-editor
             [model]="obs.model"
-            [disabled]="(editorDisabled$ | async) || obs.template?.readOnly"
+            [disabled]="(editorDisabled$ | async) || (readOnly$ | async)"
             (validEvent)="onValid($event)"
             (valueChangeEvent)="onValueChange($event)"
             [fitPage]="true"
@@ -53,7 +53,7 @@
         >
             <cds-overflow-menu class="overflow-button">
                 <cds-overflow-menu-option
-                        [disabled]="obs.moreDisabled || obs.template?.readOnly"
+                        [disabled]="obs.moreDisabled || (readOnly$ | async)"
                         type="danger"
                         (selected)="showDeleteModal()"
                 >{{ 'interface.delete' | translate }}
@@ -62,7 +62,7 @@
             </cds-overflow-menu>
 
             <button
-                    [disabled]="(saveDisabled$ | async) || obs.template?.readOnly"
+                    [disabled]="(saveDisabled$ | async) || (readOnly$ | async)"
                     cdsButton="primary"
                     size="md"
                     (click)="updateTemplate()"
@@ -77,7 +77,7 @@
 
 <ng-container *ngIf="{templateKey: templateKey$ | async} as obs">
     <valtimo-text-template-delete-modal
-            [deleteRowKeys]="[obs.templateKey]"
+            [deleteRowKeys]="[{key: obs.templateKey, type: 'text'}]"
             [showDeleteModal$]="showDeleteModal$"
             (deleteEvent)="onDelete($event)"
     >

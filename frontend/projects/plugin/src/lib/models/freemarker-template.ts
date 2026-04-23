@@ -16,25 +16,33 @@
 
 interface TemplateListItem {
     key: string;
-    readOnly: boolean;
+    type: string;
 }
 
 interface CreateTemplateRequest {
     key: string,
-    caseDefinitionName?: string,
+    caseDefinitionKey?: string,
+    caseDefinitionVersionTag?: string;
+    buildingBlockDefinitionKey?: string,
+    buildingBlockDefinitionVersionTag?: string;
     type: string,
     metadata?: any,
 }
 
 interface DeleteTemplatesRequest {
-    caseDefinitionName?: string;
-    type: TemplateType;
-    templates: Array<string>;
+    caseDefinitionKey?: string;
+    caseDefinitionVersionTag?: string;
+    buildingBlockDefinitionKey?: string;
+    buildingBlockDefinitionVersionTag?: string;
+    templates: Array<any>;
 }
 
 interface UpdateTemplateRequest {
     key: string;
-    caseDefinitionName?: string;
+    caseDefinitionKey?: string;
+    caseDefinitionVersionTag?: string;
+    buildingBlockDefinitionKey?: string;
+    buildingBlockDefinitionVersionTag?: string;
     type: TemplateType;
     metadata?: any;
     content: string;
@@ -42,23 +50,33 @@ interface UpdateTemplateRequest {
 
 interface Template {
     key: string;
-    caseDefinitionName?: string;
+    caseDefinitionKey?: string;
+    caseDefinitionVersionTag?: string;
+    buildingBlockDefinitionKey?: string;
+    buildingBlockDefinitionVersionTag?: string;
     type: TemplateType;
-    metadata: any;
+    metadata?: any;
     content: string;
 }
 
 interface TemplateResponse {
     key: string;
-    caseDefinitionName?: string;
+    caseDefinitionKey?: string;
+    caseDefinitionVersionTag?: string;
+    buildingBlockDefinitionKey?: string;
+    buildingBlockDefinitionVersionTag?: string;
     type: TemplateType;
     metadata: any;
     content: string;
-    readOnly: boolean;
+}
+
+interface TemplatePreviewRequest {
+    fileName: string;
+    content: string;
 }
 
 type TemplateMetadataModal = 'add' | 'edit';
-type TemplateType = 'mail' | 'text';
+type TemplateType = 'mail' | 'text' | 'pdf' | 'csv';
 
 export {
     TemplateListItem,
@@ -69,4 +87,5 @@ export {
     TemplateResponse,
     TemplateMetadataModal,
     TemplateType,
+    TemplatePreviewRequest
 };

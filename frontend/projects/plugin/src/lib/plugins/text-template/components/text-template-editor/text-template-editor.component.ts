@@ -15,19 +15,47 @@
  */
 
 import {AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
-import {BehaviorSubject, combineLatest, filter, map, Observable, switchMap, take, tap} from 'rxjs';
+import {BehaviorSubject, combineLatest, combineLatestWith, filter, map, merge, Observable, startWith, Subject, switchMap, take, takeUntil, tap} from 'rxjs';
 import {ActivatedRoute, Router} from '@angular/router';
-import {BreadcrumbService, EditorModel, PageTitleService} from '@valtimo/components';
-import {NotificationService} from 'carbon-components-angular';
-import {TranslateService} from '@ngx-translate/core';
+import {
+    BreadcrumbService,
+    CarbonListModule,
+    EditorModel, EditorModule,
+    PageTitleService,
+    RenderInPageHeaderDirective
+} from '@valtimo/components';
+import {ButtonModule, DialogModule, IconModule, NotificationService, TabsModule} from 'carbon-components-angular';
+import {TranslateModule, TranslateService} from '@ngx-translate/core';
 import {FreemarkerTemplateManagementService} from '../../../../services';
 import {TemplateResponse} from '../../../../models';
+import {
+  BuildingBlockManagementParams,
+  CaseManagementParams,
+  EnvironmentService,
+  getBuildingBlockManagementRouteParams,
+  getCaseManagementRouteParams
+} from '@valtimo/shared';
+import {CommonModule} from '@angular/common';
+import {TextTemplateDeleteModalComponent} from '../text-template-delete-modal/text-template-delete-modal.component';
 
 @Component({
+    standalone: true,
     templateUrl: './text-template-editor.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrls: ['./text-template-editor.component.scss'],
     providers: [NotificationService],
+    imports: [
+        CommonModule,
+        TranslateModule,
+        TabsModule,
+        DialogModule,
+        TextTemplateDeleteModalComponent,
+        CarbonListModule,
+        ButtonModule,
+        EditorModule,
+        RenderInPageHeaderDirective,
+        IconModule,
+    ]
 })
 export class TextTemplateEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     public readonly model$ = new BehaviorSubject<EditorModel | null>(null);
@@ -37,18 +65,36 @@ export class TextTemplateEditorComponent implements OnInit, AfterViewInit, OnDes
     public readonly moreDisabled$ = new BehaviorSubject<boolean>(true);
     public readonly showDeleteModal$ = new BehaviorSubject<boolean>(false);
     public readonly updatedModelValue$ = new BehaviorSubject<string>('');
+    private readonly _destroy$ = new Subject<void>();
 
-    private readonly _caseDefinitionName$: Observable<string> =
-        this.route.params.pipe(
-            map(params => params?.name),
-            filter(caseDefinitionName => !!caseDefinitionName)
-        );
+    private readonly _caseDefinitionId$: Observable<CaseManagementParams> = getCaseManagementRouteParams(this.route).pipe(
+        filter((params: CaseManagementParams | undefined) => !!params?.caseDefinitionKey),
+    );
 
-    public readonly templateKey$: Observable<string> =
-        this.route.params.pipe(
-            map(params => params?.key),
-            filter(templateKey => !!templateKey)
-        );
+    private readonly _buildingBlockDefinitionId$: Observable<BuildingBlockManagementParams> = getBuildingBlockManagementRouteParams(this.route).pipe(
+        filter((params: BuildingBlockManagementParams | undefined) => !!params?.buildingBlockDefinitionKey),
+    );
+
+    private readonly _params$: Observable<{case?: CaseManagementParams, buildingBlock?: BuildingBlockManagementParams}> = merge(
+        this._caseDefinitionId$.pipe(map(params => ({case: params}))),
+        this._buildingBlockDefinitionId$.pipe(map(params => ({buildingBlock: params})))
+    );
+
+    public readonly templateKey$: Observable<string> = combineLatest([this.route.params, this.route.parent.params]).pipe(
+        map(([params, parentParams]) => params?.templateKey || parentParams?.templateKey),
+        filter(templateKey => !!templateKey)
+    );
+
+    public readonly readOnly$: Observable<boolean> = this._params$.pipe(
+        switchMap(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) => combineLatest([
+                this.environmentService.canUpdateGlobalConfiguration(),
+                this.isFinal(caseDefinitionId, buildingBlockDefinitionId)
+            ]).pipe(
+                map(([canUpdateGlobal, isFinalCase]) => !canUpdateGlobal || isFinalCase),
+                startWith(true)
+            )
+        )
+    );
 
     constructor(
         private readonly templateService: FreemarkerTemplateManagementService,
@@ -58,6 +104,7 @@ export class TextTemplateEditorComponent implements OnInit, AfterViewInit, OnDes
         private readonly notificationService: NotificationService,
         private readonly translateService: TranslateService,
         private readonly breadcrumbService: BreadcrumbService,
+        private readonly environmentService: EnvironmentService,
     ) {
     }
 
@@ -72,6 +119,9 @@ export class TextTemplateEditorComponent implements OnInit, AfterViewInit, OnDes
     public ngOnDestroy(): void {
         this.pageTitleService.enableReset();
         this.breadcrumbService.clearThirdBreadcrumb();
+        this.breadcrumbService.clearFourthBreadcrumb();
+        this._destroy$.next();
+        this._destroy$.complete();
     }
 
     public onValid(valid: boolean): void {
@@ -87,18 +137,22 @@ export class TextTemplateEditorComponent implements OnInit, AfterViewInit, OnDes
         this.disableSave();
         this.disableMore();
 
-        combineLatest([this.updatedModelValue$, this._caseDefinitionName$, this.templateKey$]).pipe(
-            switchMap(([updatedModelValue, caseDefinitionName, templateKey]) =>
+        combineLatest([this.updatedModelValue$, this._params$, this.templateKey$]).pipe(
+            take(1),
+            switchMap(([updatedModelValue, {case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}, templateKey]) =>
                 this.templateService.updateTemplate(
                     {
                         key: templateKey,
-                        caseDefinitionName,
+                        caseDefinitionKey: caseDefinitionId?.caseDefinitionKey,
+                        caseDefinitionVersionTag: caseDefinitionId?.caseDefinitionVersionTag,
+                        buildingBlockDefinitionKey: buildingBlockDefinitionId?.buildingBlockDefinitionKey,
+                        buildingBlockDefinitionVersionTag: buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
                         type: 'text',
                         content: updatedModelValue,
                     }
                 )
             ),
-            take(1)
+            takeUntil(this._destroy$)
         ).subscribe({
             next: result => {
                 this.enableMore();
@@ -116,16 +170,32 @@ export class TextTemplateEditorComponent implements OnInit, AfterViewInit, OnDes
         });
     }
 
-    public onDelete(templates: Array<string>): void {
+    public onDelete(templates: Array<any>): void {
         this.disableEditor();
         this.disableSave();
         this.disableMore();
 
-        this._caseDefinitionName$.pipe(take(1)).subscribe(caseDefinitionName =>
-            this.templateService.deleteTemplates({caseDefinitionName, type: 'text', templates}).pipe(take(1)).subscribe(_ =>
-                this.router.navigate([`/dossier-management/dossier/${caseDefinitionName}`])
-            )
-        );
+        this._params$.pipe(
+            take(1),
+            switchMap(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) => {
+                if (caseDefinitionId?.caseDefinitionKey) {
+                    return this.templateService.deleteTemplates({
+                        caseDefinitionKey: caseDefinitionId.caseDefinitionKey,
+                        caseDefinitionVersionTag: caseDefinitionId.caseDefinitionVersionTag,
+                        templates
+                    }).pipe(map(() => `/case-management/case/${caseDefinitionId.caseDefinitionKey}/version/${caseDefinitionId.caseDefinitionVersionTag}/text-template`));
+                } else {
+                    return this.templateService.deleteTemplates({
+                        buildingBlockDefinitionKey: buildingBlockDefinitionId.buildingBlockDefinitionKey,
+                        buildingBlockDefinitionVersionTag: buildingBlockDefinitionId.buildingBlockDefinitionVersionTag,
+                        templates
+                    }).pipe(map(() => `/building-block-management/building-block/${buildingBlockDefinitionId.buildingBlockDefinitionKey}/version/${buildingBlockDefinitionId.buildingBlockDefinitionVersionTag}/text-template`));
+                }
+            }),
+            takeUntil(this._destroy$)
+        ).subscribe(targetUrl => {
+            this.router.navigate([targetUrl]);
+        });
     }
 
     public showDeleteModal(): void {
@@ -133,13 +203,19 @@ export class TextTemplateEditorComponent implements OnInit, AfterViewInit, OnDes
     }
 
     private loadTemplate(): void {
-        combineLatest([this._caseDefinitionName$, this.templateKey$]).pipe(
-            tap(([_, key]) => {
-                this.pageTitleService.setCustomPageTitle(`Text Template: ${key}`, true);
+        this._params$.pipe(
+            combineLatestWith(this.templateKey$),
+            switchMap(([{case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}, key]) => {
+                return this.templateService.getTextTemplate(
+                    caseDefinitionId,
+                    buildingBlockDefinitionId,
+                    key
+                ).pipe(map(result => ({result, key})));
             }),
-            switchMap(([caseDefinitionName, key]) => this.templateService.getTextTemplate(caseDefinitionName, key)),
             take(1),
-        ).subscribe(result => {
+            takeUntil(this._destroy$)
+        ).subscribe(({result, key}) => {
+            this.pageTitleService.setCustomPageTitle(`Text template: ${key}`, true);
             this.enableMore();
             this.enableSave();
             this.enableEditor();
@@ -180,13 +256,35 @@ export class TextTemplateEditorComponent implements OnInit, AfterViewInit, OnDes
         this.editorDisabled$.next(false);
     }
 
+    private isFinal(caseDefinitionId: CaseManagementParams | undefined, buildingBlockDefinitionId: BuildingBlockManagementParams | undefined): Observable<boolean> {
+        return this.templateService.isFinal(caseDefinitionId, buildingBlockDefinitionId);
+    }
+
     private initBreadcrumb(): void {
-        this._caseDefinitionName$.subscribe(caseDefinitionName => {
-            this.breadcrumbService.setThirdBreadcrumb({
-                route: [`/dossier-management/dossier/${caseDefinitionName}`],
-                content: caseDefinitionName,
-                href: `/dossier-management/dossier/${caseDefinitionName}`,
-            });
+        this._params$.pipe(takeUntil(this._destroy$)).subscribe(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) => {
+            if (caseDefinitionId) {
+                this.breadcrumbService.setThirdBreadcrumb({
+                    route: [`/case-management/case/${caseDefinitionId.caseDefinitionKey}/version/${caseDefinitionId.caseDefinitionVersionTag}`],
+                    content: `${caseDefinitionId.caseDefinitionKey}:${caseDefinitionId.caseDefinitionVersionTag}`,
+                    href: `/case-management/case/${caseDefinitionId.caseDefinitionKey}/version/${caseDefinitionId.caseDefinitionVersionTag}`,
+                });
+                this.breadcrumbService.setFourthBreadcrumb({
+                    route: [`/case-management/case/${caseDefinitionId.caseDefinitionKey}/version/${caseDefinitionId.caseDefinitionVersionTag}/text-template`],
+                    content: 'Text template',
+                    href: `/case-management/case/${caseDefinitionId.caseDefinitionKey}/version/${caseDefinitionId.caseDefinitionVersionTag}/text-template`,
+                });
+            } else if (buildingBlockDefinitionId) {
+                this.breadcrumbService.setThirdBreadcrumb({
+                    route: [`/building-block-management/building-block/${buildingBlockDefinitionId.buildingBlockDefinitionKey}/version/${buildingBlockDefinitionId.buildingBlockDefinitionVersionTag}`],
+                    content: `${buildingBlockDefinitionId.buildingBlockDefinitionKey}:${buildingBlockDefinitionId.buildingBlockDefinitionVersionTag}`,
+                    href: `/building-block-management/building-block/${buildingBlockDefinitionId.buildingBlockDefinitionKey}/version/${buildingBlockDefinitionId.buildingBlockDefinitionVersionTag}`,
+                });
+                this.breadcrumbService.setFourthBreadcrumb({
+                    route: [`/building-block-management/building-block/${buildingBlockDefinitionId.buildingBlockDefinitionKey}/version/${buildingBlockDefinitionId.buildingBlockDefinitionVersionTag}/text-template`],
+                    content: 'Text template',
+                    href: `/building-block-management/building-block/${buildingBlockDefinitionId.buildingBlockDefinitionKey}/version/${buildingBlockDefinitionId.buildingBlockDefinitionVersionTag}/text-template`,
+                });
+            }
         });
     }
 

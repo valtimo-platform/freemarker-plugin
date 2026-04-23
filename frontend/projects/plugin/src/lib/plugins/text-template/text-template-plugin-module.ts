@@ -14,20 +14,54 @@
  * limitations under the License.
  */
 
-import {NgModule} from '@angular/core';
-import {TextTemplateConfigurationComponent} from './components/text-template-configuration/text-template-configuration.component';
-import {CommonModule} from '@angular/common';
-import {PluginTranslatePipeModule} from '@valtimo/plugin';
+import { NgModule } from "@angular/core";
+import { TextTemplateConfigurationComponent } from "./components/text-template-configuration/text-template-configuration.component";
+import { CommonModule } from "@angular/common";
+import { PluginManagementService, PluginTranslatePipeModule } from "@valtimo/plugin";
 import {
-    CarbonListModule,
-    ConfirmationModalModule,
-    EditorModule,
+  CarbonListModule,
+  ConfirmationModalModule,
+  EditorModule,
+  FormModule,
+  InputModule as ValtimoInputModule,
+  ParagraphModule,
+  RenderInPageHeaderDirective,
+  SelectModule,
+} from "@valtimo/components";
+import {
+  ButtonModule,
+  DialogModule,
+  DropdownModule,
+  IconModule,
+  InputModule,
+  LoadingModule,
+  ModalModule,
+  NotificationModule,
+  TabsModule,
+} from "carbon-components-angular";
+import { BUILDING_BLOCK_MANAGEMENT_TAB_TOKEN, CASE_MANAGEMENT_TAB_TOKEN } from "@valtimo/shared";
+import { TextTemplateListComponent } from "../text-template/components/text-template-list/text-template-list.component";
+import { TranslateModule } from "@ngx-translate/core";
+import { ReactiveFormsModule } from "@angular/forms";
+import { TemplateManagementRoutingModule } from "./text-template-management-routing.module";
+import { GenerateTextFileComponent } from "./components/generate-text-file/generate-text-file.component";
+import { catchError, map, of } from "rxjs";
+
+@NgModule({
+  declarations: [GenerateTextFileComponent, TextTemplateConfigurationComponent],
+  imports: [
+    CommonModule,
+    PluginTranslatePipeModule,
+    TemplateManagementRoutingModule,
     FormModule,
-    InputModule as ValtimoInputModule,
-    ParagraphModule, RenderInPageHeaderDirectiveModule,
+    ParagraphModule,
     SelectModule,
-} from '@valtimo/components';
-import {
+    ConfirmationModalModule,
+    TranslateModule,
+    ReactiveFormsModule,
+    CarbonListModule,
+    EditorModule,
+    ValtimoInputModule,
     ButtonModule,
     DialogModule,
     DropdownModule,
@@ -35,69 +69,42 @@ import {
     InputModule,
     LoadingModule,
     ModalModule,
-    NotificationModule, TabsModule,
-} from 'carbon-components-angular';
-import {CASE_MANAGEMENT_TAB_TOKEN} from '@valtimo/config';
-import {TextTemplateListComponent} from './components/text-template-list/text-template-list.component';
-import {TextTemplateAddEditModalComponent} from './components/text-template-add-edit-modal/text-template-add-edit-modal.component';
-import {TextTemplateEditorComponent} from './components/text-template-editor/text-template-editor.component';
-import {TextTemplateDeleteModalComponent} from './components/text-template-delete-modal/text-template-delete-modal.component';
-import {TranslateModule} from '@ngx-translate/core';
-import {ReactiveFormsModule} from '@angular/forms';
-import {TemplateManagementRoutingModule} from './text-template-management-routing.module';
-import {GenerateTextFileComponent} from './components/generate-text-file/generate-text-file.component';
-
-@NgModule({
-    declarations: [
-        GenerateTextFileComponent,
-        TextTemplateConfigurationComponent,
-        TextTemplateAddEditModalComponent,
-        TextTemplateEditorComponent,
-        TextTemplateDeleteModalComponent,
-        TextTemplateListComponent,
-    ],
-    imports: [
-        CommonModule,
-        PluginTranslatePipeModule,
-        TemplateManagementRoutingModule,
-        FormModule,
-        ParagraphModule,
-        SelectModule,
-        ConfirmationModalModule,
-        TranslateModule,
-        ReactiveFormsModule,
-        CarbonListModule,
-        EditorModule,
-        ValtimoInputModule,
-        ButtonModule,
-        DialogModule,
-        DropdownModule,
-        IconModule,
-        InputModule,
-        LoadingModule,
-        ModalModule,
-        NotificationModule,
-        RenderInPageHeaderDirectiveModule,
-        TabsModule,
-    ],
-    exports: [
-        GenerateTextFileComponent,
-        TextTemplateConfigurationComponent,
-        TextTemplateAddEditModalComponent,
-        TextTemplateEditorComponent,
-        TextTemplateDeleteModalComponent,
-        TextTemplateListComponent,
-    ],
-    providers: [
-        {
-            provide: CASE_MANAGEMENT_TAB_TOKEN,
-            useValue: {
-                translationKey: 'Text templates',
-                component: TextTemplateListComponent,
-            },
-            multi: true,
-        }
-    ]
+    NotificationModule,
+    RenderInPageHeaderDirective,
+    TabsModule,
+  ],
+  exports: [GenerateTextFileComponent],
+  providers: [
+    {
+      provide: CASE_MANAGEMENT_TAB_TOKEN,
+      useFactory: (pluginManagementService: PluginManagementService) => ({
+        translationKey: "Text template",
+        component: TextTemplateListComponent,
+        tabRoute: "text-template",
+        enabled$: pluginManagementService.getAllPluginConfigurations().pipe(
+          map((pluginConfigs) => pluginConfigs.find((pluginConfig) => pluginConfig.pluginDefinition?.key === "text-template")),
+          catchError(() => of(false)),
+        ),
+      }),
+      deps: [PluginManagementService],
+      multi: true,
+    },
+    {
+      provide: BUILDING_BLOCK_MANAGEMENT_TAB_TOKEN,
+      useFactory: (pluginManagementService: PluginManagementService) => {
+        return {
+          translationKey: "Text template",
+          component: TextTemplateListComponent,
+          tabRoute: "text-template",
+          enabled$: pluginManagementService.getAllPluginConfigurations().pipe(
+            map((pluginConfigs) => pluginConfigs.find((pluginConfig) => pluginConfig.pluginDefinition?.key === "text-template")),
+            catchError(() => of(false)),
+          ),
+        };
+      },
+      deps: [PluginManagementService],
+      multi: true,
+    },
+  ],
 })
-export class TextTemplatePluginModule {
-}
+export class TextTemplatePluginModule {}
