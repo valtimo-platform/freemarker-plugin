@@ -76,7 +76,7 @@ centralPortalPlus {
 
 if (signingConfigSet) {
     signing {
-        def signingKeyBase64 = System.getenv("SIGNING_KEY")
+        def signingKeyBase64 = System.getenv("SIGNING_KEY").replaceAll("\\s+", "")
         def signingKeyBytes = signingKeyBase64.decodeBase64()
         def signingKey = new String(signingKeyBytes, "UTF-8")
         def signingKeyPassword = System.getenv('SIGNING_KEY_PASSWORD')
