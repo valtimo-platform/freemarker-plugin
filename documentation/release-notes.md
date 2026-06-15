@@ -2,6 +2,9 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.3.6
+Valtimo-versies worden niet langer afgedwongen op consumers van de plugin: de Valtimo dependency-BOM wordt nu alleen tijdens compilatie en tests toegepast en niet meer gepubliceerd als afhankelijkheidsbeperking.
+
 ## 8.3.5
 Eerste release vanuit de zelfstandige plugin-repository.
 

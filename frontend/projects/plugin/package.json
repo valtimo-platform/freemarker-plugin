@@ -1,7 +1,7 @@
 {
   "name": "@valtimo-plugins/freemarker",
   "license": "EUPL-1.2",
-  "version": "8.3.5",
+  "version": "8.3.6",
   "scripts": {
     "build": "ng build @valtimo-plugins/freemarker",
     "watch": "ng build @valtimo-plugins/freemarker --watch"
