@@ -4,6 +4,7 @@ val nettyResolverDnsNativeMacOsVersion: String by project
 dependencies {
     implementation(platform("com.ritense.valtimo:valtimo-dependency-versions"))
 
+
     implementation("com.ritense.valtimo:valtimo-dependencies")
     implementation("com.ritense.valtimo:documenten-api")
     implementation("com.ritense.valtimo:local-mail")
