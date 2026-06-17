@@ -44,7 +44,6 @@ import org.springframework.core.Ordered.HIGHEST_PRECEDENCE
 import org.springframework.core.annotation.Order
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 
-
 @AutoConfiguration
 @EnableJpaRepositories(basePackageClasses = [TemplateRepository::class, JsonSchemaDocumentRepositoryStreaming::class])
 @EntityScan(basePackageClasses = [ValtimoTemplate::class])
