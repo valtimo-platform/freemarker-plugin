@@ -30,11 +30,12 @@ https://github.com/user-attachments/assets/3b27631d-bbda-406e-b6b7-f6e5be21f9b9
 | Action             | Key                  | Description                                                                                                                       |
 |--------------------|----------------------|-----------------------------------------------------------------------------------------------------------------------------------|
 | Generate Text File | `generate-text-file` | Generates text based on a template and saves it as a temporary file. The resource ID is stored in the specified process variable. |
+| Generate Text      | `generate-text`      | Generates text based on a template and stores the text directly in the specified process variable.                                |
 
 ### Action properties
 
 - `textTemplateKey` — The key of the text template to use for generation.
-- `processVariableName` — The name of the process variable where the resource ID will be stored.
+- `processVariableName` — The name of the process variable where the result will be stored (resource ID for `generate-text-file`, generated text for `generate-text`).
 
 ### Value resolver
 

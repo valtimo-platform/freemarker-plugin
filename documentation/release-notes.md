@@ -2,6 +2,10 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.4.1
+
+Valtimo bijgewerkt naar versie 13.34.0.
+
 ## 8.4.0
 
 Nieuwe plugin-actie `Genereer Text` toegevoegd aan de Text-template plugin: het resultaat van een sjabloon wordt direct
