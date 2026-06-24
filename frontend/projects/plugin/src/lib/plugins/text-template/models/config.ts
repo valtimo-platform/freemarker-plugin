@@ -29,4 +29,9 @@ interface GenerateTextFileConfig {
     processVariableName: string;
 }
 
-export {TextTemplateConfig, GenerateTextContentConfig, GenerateTextFileConfig};
+interface GenerateTextConfig {
+    textTemplateKey: string;
+    processVariableName: string;
+}
+
+export {TextTemplateConfig, GenerateTextContentConfig, GenerateTextFileConfig, GenerateTextConfig};

@@ -45,10 +45,11 @@ import { TranslateModule } from "@ngx-translate/core";
 import { ReactiveFormsModule } from "@angular/forms";
 import { TemplateManagementRoutingModule } from "./text-template-management-routing.module";
 import { GenerateTextFileComponent } from "./components/generate-text-file/generate-text-file.component";
+import { GenerateTextComponent } from "./components/generate-text/generate-text.component";
 import { catchError, map, of } from "rxjs";
 
 @NgModule({
-  declarations: [GenerateTextFileComponent, TextTemplateConfigurationComponent],
+  declarations: [GenerateTextFileComponent, GenerateTextComponent, TextTemplateConfigurationComponent],
   imports: [
     CommonModule,
     PluginTranslatePipeModule,
@@ -73,7 +74,7 @@ import { catchError, map, of } from "rxjs";
     RenderInPageHeaderDirective,
     TabsModule,
   ],
-  exports: [GenerateTextFileComponent],
+  exports: [GenerateTextFileComponent, GenerateTextComponent],
   providers: [
     {
       provide: CASE_MANAGEMENT_TAB_TOKEN,

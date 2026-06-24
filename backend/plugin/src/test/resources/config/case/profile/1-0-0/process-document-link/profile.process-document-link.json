@@ -1,6 +1,12 @@
 [
     {
-        "processDefinitionKey": "TestProcess",
+        "processDefinitionKey": "MailTemplateTestProcess",
+        "canInitializeDocument": true,
+        "startableByUser": true,
+        "processIsVisibleInMenu": true
+    },
+    {
+        "processDefinitionKey": "TextTemplateTestProcess",
         "canInitializeDocument": true,
         "startableByUser": true,
         "processIsVisibleInMenu": true

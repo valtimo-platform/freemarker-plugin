@@ -122,7 +122,7 @@ export class DocumentTemplateListComponent implements OnInit {
                 buildingBlockDefinitionKey: buildingBlockDefinitionId?.buildingBlockDefinitionKey,
                 buildingBlockDefinitionVersionTag: buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
                 key: data.key,
-                type: data.type.id,
+                type: data.type,
                 content: ''
             }))
         ).subscribe(template => {

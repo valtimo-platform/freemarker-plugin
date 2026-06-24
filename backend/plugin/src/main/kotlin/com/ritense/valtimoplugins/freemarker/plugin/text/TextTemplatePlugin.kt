@@ -61,6 +61,20 @@ open class TextTemplatePlugin(
         execution.setVariable(processVariableName, resourceId)
     }
 
+    @PluginAction(
+        key = "generate-text",
+        title = "Generate Text",
+        description = "Generates text based on the template and stores it in a process variable",
+        activityTypes = [SERVICE_TASK_START],
+    )
+    open fun generateText(
+        execution: DelegateExecution,
+        @PluginActionProperty textTemplateKey: String,
+        @PluginActionProperty processVariableName: String,
+    ) {
+        execution.setVariable(processVariableName, generateTextContent(execution, textTemplateKey))
+    }
+
     private fun generateTextContent(
         execution: DelegateExecution,
         templateKey: String,

@@ -101,7 +101,7 @@ class MailTemplatePluginIT : BaseIntegrationTest() {
     companion object {
         private const val CASE_DEFINITION_KEY = "profile"
         private const val CASE_DEFINITION_VERSION_TAG = "1.0.0"
-        private const val PROCESS_DEFINITION_KEY = "TestProcess"
+        private const val PROCESS_DEFINITION_KEY = "MailTemplateTestProcess"
         private const val DOCUMENT_DEFINITION_NAME = "profile"
     }
 }

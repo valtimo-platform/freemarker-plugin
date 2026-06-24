@@ -1,0 +1,24 @@
+[
+  {
+    "activityId": "GenerateTextFileTask",
+    "activityType": "bpmn:ServiceTask:start",
+    "processLinkType": "plugin",
+    "pluginConfigurationId": "4ac9a49e-4aeb-4f91-86d9-853fd95a1b33",
+    "pluginActionDefinitionKey": "generate-text-file",
+    "actionProperties": {
+      "textTemplateKey": "text-letter-template",
+      "processVariableName": "contentId"
+    }
+  },
+  {
+    "activityId": "GenerateTextTask",
+    "activityType": "bpmn:ServiceTask:start",
+    "processLinkType": "plugin",
+    "pluginConfigurationId": "4ac9a49e-4aeb-4f91-86d9-853fd95a1b33",
+    "pluginActionDefinitionKey": "generate-text",
+    "actionProperties": {
+      "textTemplateKey": "text-letter-template",
+      "processVariableName": "textContent"
+    }
+  }
+]

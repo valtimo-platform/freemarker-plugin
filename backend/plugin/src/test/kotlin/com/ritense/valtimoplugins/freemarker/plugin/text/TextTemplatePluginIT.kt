@@ -56,12 +56,12 @@ class TextTemplatePluginIT : BaseIntegrationTest() {
     internal fun setUp() {
         configuration =
             pluginService.getPluginConfiguration(
-                PluginConfigurationId(UUID.fromString("515cc605-b5e5-4875-bbf0-f609f788f80e")),
+                PluginConfigurationId(UUID.fromString("4ac9a49e-4aeb-4f91-86d9-853fd95a1b33")),
             )
     }
 
     @Test
-    fun `save generate text and save to temporary file`() {
+    fun `generate-text-file saves content to temporary file and stores file id in process variable`() {
         val result = createDocumentAndStartProcess("""{ "lastname": "Doe", "houseNumber": 133 }""")
 
         val contentId =
@@ -72,7 +72,21 @@ class TextTemplatePluginIT : BaseIntegrationTest() {
                 )["contentId"] as String
             }
         assertNotNull(contentId)
-        val textContent = storageService.getResourceContentAsInputStream(contentId).bufferedReader().readText()
+        val fileContent = storageService.getResourceContentAsInputStream(contentId).bufferedReader().readText()
+        assertEquals("<b>Lastname: Doe, House number: 133!</b>", fileContent)
+    }
+
+    @Test
+    fun `generate-text stores rendered template as text in process variable`() {
+        val result = createDocumentAndStartProcess("""{ "lastname": "Doe", "houseNumber": 133 }""")
+
+        val textContent =
+            runWithoutAuthorization {
+                operatonRuntimeService.getVariables(
+                    result.resultingProcessInstanceId().get().toString(),
+                    listOf("textContent"),
+                )["textContent"] as String
+            }
         assertEquals("<b>Lastname: Doe, House number: 133!</b>", textContent)
     }
 
@@ -85,8 +99,8 @@ class TextTemplatePluginIT : BaseIntegrationTest() {
                 PROCESS_DEFINITION_KEY,
                 NewDocumentRequest(
                     DOCUMENT_DEFINITION_NAME,
-                    DOCUMENT_DEFINITION_NAME,
-                    "1.0.0",
+                    CASE_DEFINITION_KEY,
+                    CASE_DEFINITION_VERSION_TAG,
                     MapperSingleton.get().readTree(documentContent),
                 ),
             )
@@ -99,7 +113,9 @@ class TextTemplatePluginIT : BaseIntegrationTest() {
     }
 
     companion object {
-        private const val PROCESS_DEFINITION_KEY = "TestProcess"
+        private const val CASE_DEFINITION_KEY = "profile"
+        private const val CASE_DEFINITION_VERSION_TAG = "1.0.0"
+        private const val PROCESS_DEFINITION_KEY = "TextTemplateTestProcess"
         private const val DOCUMENT_DEFINITION_NAME = "profile"
     }
 }

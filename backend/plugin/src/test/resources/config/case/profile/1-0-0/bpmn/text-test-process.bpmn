@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_text" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="TextTemplateTestProcess" name="Text template test process" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_to_file</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_to_file" sourceRef="StartEvent_1" targetRef="GenerateTextFileTask" />
+    <bpmn:serviceTask id="GenerateTextFileTask" name="Generate text file" camunda:expression="${null}">
+      <bpmn:incoming>Flow_to_file</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_text</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_to_text" sourceRef="GenerateTextFileTask" targetRef="GenerateTextTask" />
+    <bpmn:serviceTask id="GenerateTextTask" name="Generate text" camunda:expression="${null}">
+      <bpmn:incoming>Flow_to_text</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_user</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_to_user" sourceRef="GenerateTextTask" targetRef="user-task" />
+    <bpmn:userTask id="user-task" name="User task" camunda:candidateGroups="ROLE_USER">
+      <bpmn:incoming>Flow_to_user</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_to_end" sourceRef="user-task" targetRef="EndEvent_1" />
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>
