@@ -2,6 +2,12 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.5.0
+
+In de genereer-acties kan de sjabloon nu naast een keuzelijst ook via een vrije tekst/expressie of een value resolver
+worden bepaald, zodat een generiek bouwblok met een variabele sjabloon mogelijk is. Bestaande configuraties blijven
+ongewijzigd werken.
+
 ## 8.4.1
 
 Valtimo bijgewerkt naar versie 13.34.0.

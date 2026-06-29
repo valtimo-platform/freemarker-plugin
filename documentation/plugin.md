@@ -15,7 +15,9 @@ For creating HTML mail templates with Freemarker.
 
 ### Action properties
 
-- `mailTemplateKey` — The key of the mail template to use for generation.
+- `mailTemplateKey` — The key of the mail template to use for generation. In the configuration screen the key can be
+  provided in three ways: by selecting an existing template, by entering free text or a value-resolver expression (e.g.
+  `pv:myKey` or `doc:/path`), or by selecting a document/case field via a value resolver.
 - `processVariableName` — The name of the process variable where the result will be stored.
 
 ## Plugin 2: Text Template Plugin
@@ -34,7 +36,9 @@ https://github.com/user-attachments/assets/3b27631d-bbda-406e-b6b7-f6e5be21f9b9
 
 ### Action properties
 
-- `textTemplateKey` — The key of the text template to use for generation.
+- `textTemplateKey` — The key of the text template to use for generation. In the configuration screen the key can be
+  provided in three ways: by selecting an existing template, by entering free text or a value-resolver expression (e.g.
+  `pv:myKey` or `doc:/path`), or by selecting a document/case field via a value resolver.
 - `processVariableName` — The name of the process variable where the result will be stored (resource ID for `generate-text-file`, generated text for `generate-text`).
 
 ### Value resolver
@@ -58,7 +62,9 @@ https://github.com/user-attachments/assets/7f67de58-3d46-49fb-ba3a-d713e858ec1b
 
 ### Action properties
 
-- `templateKey` — The key of the template to use for generation.
+- `templateKey` — The key of the template to use for generation. In the configuration screen the key can be provided in
+  three ways: by selecting an existing template, by entering free text or a value-resolver expression (e.g. `pv:myKey` or
+  `doc:/path`), or by selecting a document/case field via a value resolver.
 - `processVariableName` — The name of the process variable where the resource ID will be stored.
 
 # Dependencies
