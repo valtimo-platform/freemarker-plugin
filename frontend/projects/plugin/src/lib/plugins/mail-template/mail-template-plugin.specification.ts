@@ -45,6 +45,15 @@ const mailTemplatePluginSpecification: PluginSpecification = {
       mailTemplateKeyTooltip: "Op bases van deze sjabloon wordt de mail gegenereerd",
       processVariableName: "Procesvariabelenaam",
       processVariableNameTooltip: "Het resultaat wordt opgeslagen in een procesvariabele met deze naam",
+      templateKeyInputType: "Invoertype sjabloon",
+      templateKeyInputTypeTooltip:
+        "Kies hoe de sjabloon wordt bepaald: kies een bestaande sjabloon, voer een waarde/expressie in, of selecteer een waarde via een value resolver.",
+      inputTypeSelection: "Bestaande sjabloon",
+      inputTypeText: "Tekst / expressie",
+      inputTypeValueResolver: "Value resolver",
+      templateKeyTextTooltip:
+        "Voer een sjabloonsleutel of een expressie in (bijv. pv:mijnSleutel of doc:/pad). De waarde wordt tijdens uitvoering omgezet naar een sjabloonsleutel.",
+      templateKeyValueResolverTooltip: "Selecteer een document- of zaakveld dat de sjabloonsleutel bevat.",
     },
     en: {
       title: "Mail Templates",
@@ -62,6 +71,15 @@ const mailTemplatePluginSpecification: PluginSpecification = {
       mailTemplateKeyTooltip: "The mail will be generated based on this template.",
       processVariableName: "Process Variable Name",
       processVariableNameTooltip: "The result will be stored in a process variable with this name.",
+      templateKeyInputType: "Template input type",
+      templateKeyInputTypeTooltip:
+        "Choose how the template is determined: pick an existing template, enter a value/expression, or select a value via a value resolver.",
+      inputTypeSelection: "Existing template",
+      inputTypeText: "Text / expression",
+      inputTypeValueResolver: "Value resolver",
+      templateKeyTextTooltip:
+        "Enter a template key or an expression (e.g. pv:myKey or doc:/path). The value is resolved to a template key at runtime.",
+      templateKeyValueResolverTooltip: "Select a document or case field that holds the template key.",
     },
   },
 };

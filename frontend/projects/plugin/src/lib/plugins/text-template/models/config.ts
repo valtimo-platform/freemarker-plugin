@@ -16,22 +16,27 @@
 
 import {PluginConfigurationData} from '@valtimo/plugin';
 
+type TemplateKeyInputType = 'selection' | 'text' | 'value-resolver';
+
 interface TextTemplateConfig extends PluginConfigurationData {
 }
 
 interface GenerateTextContentConfig {
     textTemplateKey: string;
     processVariableName: string;
+    templateKeyInputType?: TemplateKeyInputType;
 }
 
 interface GenerateTextFileConfig {
     textTemplateKey: string;
     processVariableName: string;
+    templateKeyInputType?: TemplateKeyInputType;
 }
 
 interface GenerateTextConfig {
     textTemplateKey: string;
     processVariableName: string;
+    templateKeyInputType?: TemplateKeyInputType;
 }
 
 export {TextTemplateConfig, GenerateTextContentConfig, GenerateTextFileConfig, GenerateTextConfig};

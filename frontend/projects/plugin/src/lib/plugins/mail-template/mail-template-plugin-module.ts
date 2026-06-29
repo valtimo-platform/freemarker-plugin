@@ -25,6 +25,7 @@ import {
   FormModule,
   InputModule as ValtimoInputModule,
   ParagraphModule,
+  RadioModule,
   RenderInPageHeaderDirective,
   SelectModule,
 } from "@valtimo/components";
@@ -58,6 +59,7 @@ import { catchError, map, of } from "rxjs";
     FormModule,
     ParagraphModule,
     SelectModule,
+    RadioModule,
     ConfirmationModalModule,
     TranslateModule,
     ReactiveFormsModule,

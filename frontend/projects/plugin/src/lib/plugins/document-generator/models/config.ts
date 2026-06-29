@@ -16,17 +16,21 @@
 
 import {PluginConfigurationData} from '@valtimo/plugin';
 
+type TemplateKeyInputType = 'selection' | 'text' | 'value-resolver';
+
 interface DocumentTemplateConfig extends PluginConfigurationData {
 }
 
 interface GeneratePdfFileConfig {
     templateKey: string;
     processVariableName: string;
+    templateKeyInputType?: TemplateKeyInputType;
 }
 
 interface GenerateCsvFileConfig {
     templateKey: string;
     processVariableName: string;
+    templateKeyInputType?: TemplateKeyInputType;
 }
 
 const DOCUMENT_TYPES: Array<string> = ['csv', 'pdf'];

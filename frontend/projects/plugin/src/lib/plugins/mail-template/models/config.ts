@@ -16,17 +16,21 @@
 
 import {PluginConfigurationData} from '@valtimo/plugin';
 
+type TemplateKeyInputType = 'selection' | 'text' | 'value-resolver';
+
 interface MailTemplateConfig extends PluginConfigurationData {
 }
 
 interface GenerateMailContentConfig {
   mailTemplateKey: string;
   processVariableName: string;
+  templateKeyInputType?: TemplateKeyInputType;
 }
 
 interface GenerateMailFileConfig {
   mailTemplateKey: string;
   processVariableName: string;
+  templateKeyInputType?: TemplateKeyInputType;
 }
 
 export {MailTemplateConfig, GenerateMailContentConfig, GenerateMailFileConfig};
