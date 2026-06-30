@@ -16,6 +16,10 @@
             {
                 "spec": "textTemplatePluginSpecification",
                 "module": "TextTemplatePluginModule"
+            },
+            {
+                "spec": "documentGeneratorPluginSpecification",
+                "module": "DocumentGeneratorPluginModule"
             }
         ]
     }
