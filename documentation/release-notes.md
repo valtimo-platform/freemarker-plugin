@@ -2,6 +2,10 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.5.1
+
+Beveiligingsfix (GHSA-j2cr-xx4w-m39c)
+
 ## 8.5.0
 
 In de genereer-acties kan de sjabloon nu naast een keuzelijst ook via een vrije tekst/expressie of een value resolver
