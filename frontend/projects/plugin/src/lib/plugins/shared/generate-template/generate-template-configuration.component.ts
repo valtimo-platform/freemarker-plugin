@@ -127,6 +127,7 @@ export abstract class GenerateTemplateConfigurationComponent
         switchMap(context =>
             this.valuePathSelectorService.getResolvableKeysForContext(
                 this.valuePathSelectorPrefixes,
+                [],
                 context,
                 ValuePathType.FIELD,
             ),

@@ -2,6 +2,10 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.5.2
+
+Valtimo bijgewerkt naar versie 13.40.0.
+
 ## 8.5.1
 
 Beveiligingsfix (GHSA-j2cr-xx4w-m39c)
