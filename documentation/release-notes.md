@@ -2,6 +2,10 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.5.3
+
+De configuratie van een genereer-actie bleef eindeloos laden.
+
 ## 8.5.2
 
 Valtimo bijgewerkt naar versie 13.40.0.

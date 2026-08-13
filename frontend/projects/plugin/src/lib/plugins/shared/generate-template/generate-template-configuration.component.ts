@@ -28,11 +28,13 @@ import {TranslateService} from '@ngx-translate/core';
 import {
     BehaviorSubject,
     combineLatest,
+    distinctUntilChanged,
     filter,
     map,
-    merge,
     Observable,
     of,
+    shareReplay,
+    skip,
     Subject,
     Subscription,
     switchMap,
@@ -52,6 +54,11 @@ import {FreemarkerTemplateManagementService} from '../../../services';
 import {TemplateListItem} from '../../../models';
 
 export type TemplateKeyInputType = 'selection' | 'text' | 'value-resolver';
+
+/** The management context the template list is scoped to, once resolved from route/context inputs. */
+type ResolvedTemplateContext =
+    | {managementContext: 'case'; caseParams: CaseManagementParams}
+    | {managementContext: 'buildingBlock'; buildingBlockParams: BuildingBlockManagementParams};
 
 /**
  * Shared base for all "generate template content" plugin actions. It renders a radio toggle that
@@ -101,9 +108,17 @@ export abstract class GenerateTemplateConfigurationComponent
     protected readonly _subscriptions = new Subscription();
     protected readonly _destroy$ = new Subject<void>();
 
+    /** The management context the template list is scoped to, or null when there is none. */
+    protected resolvedContext$!: Observable<ResolvedTemplateContext | null>;
+
     readonly loading$ = new BehaviorSubject<boolean>(true);
     readonly templateItems$ = new BehaviorSubject<Array<SelectItem>>([]);
     readonly selectedInputType$ = new BehaviorSubject<TemplateKeyInputType>('selection');
+    /**
+     * The input type the radio group starts on. Resolved once, before the form is rendered, so the
+     * radio is not reset while the user is interacting with it.
+     */
+    readonly defaultInputType$ = new BehaviorSubject<TemplateKeyInputType>('selection');
 
     readonly caseDefinitionKey$ = new BehaviorSubject<string | null>(null);
     readonly caseDefinitionVersionTag$ = new BehaviorSubject<string | null>(null);
@@ -153,9 +168,11 @@ export abstract class GenerateTemplateConfigurationComponent
     }
 
     ngOnInit(): void {
+        // depends on the context$ input, so it cannot be built as a field initialiser
+        this.resolvedContext$ = this.createResolvedContext();
         this.openSaveSubscription();
-        this.initContextHandling();
-        this.initInputTypePrefill();
+        this.initInputType();
+        this.initTemplateItems();
     }
 
     ngOnDestroy(): void {
@@ -198,60 +215,110 @@ export abstract class GenerateTemplateConfigurationComponent
         this._subscriptions.add(saveSubscription);
     }
 
-    private initInputTypePrefill(): void {
-        const prefillSubscription = (this.prefillConfiguration$ ?? of(null))
+    /**
+     * Picks the input type the form opens on: the saved one when the configuration is being edited,
+     * otherwise the template dropdown when there are templates to choose from, and the free text
+     * input when there are none — an empty, required dropdown would be a dead end.
+     *
+     * This waits for the first loaded template list rather than for the resolved context, so a
+     * context that resolves in a later tick (route params of a case or building block) cannot be
+     * mistaken for 'no context'.
+     */
+    private initInputType(): void {
+        const inputTypeSubscription = combineLatest([
+            (this.prefillConfiguration$ ?? of(null)).pipe(take(1)),
+            // templateItems$ is seeded with an empty list; skip it and take the first loaded one
+            this.templateItems$.pipe(skip(1), take(1)),
+        ])
             .pipe(take(1))
-            .subscribe(prefill => {
-                const inputType = (prefill?.['templateKeyInputType'] as TemplateKeyInputType) || 'selection';
+            .subscribe(([prefill, templateItems]) => {
+                const inputType =
+                    (prefill?.['templateKeyInputType'] as TemplateKeyInputType) ||
+                    (templateItems.length ? 'selection' : 'text');
+
+                this.defaultInputType$.next(inputType);
                 this.selectedInputType$.next(inputType);
             });
-        this._subscriptions.add(prefillSubscription);
+        this._subscriptions.add(inputTypeSubscription);
     }
 
-    private initContextHandling(): void {
-        const caseParams$ = this.context$ ? this.context$.pipe(
-            filter(([managementContext, caseParams]) => managementContext === 'case' && !!caseParams?.caseDefinitionKey),
-            map(([, caseParams]) => ({managementContext: 'case' as ManagementContext, caseParams})),
-        ) : of(null);
+    /** Loads the template dropdown items for the resolved context; empty when there is no context. */
+    private initTemplateItems(): void {
+        this.resolvedContext$
+            .pipe(
+                switchMap(params => {
+                    if (!params) {
+                        return of(null);
+                    }
 
-        const buildingBlockParams$ = this.buildingBlockParams$.pipe(
-            filter(buildingBlockParams => !!buildingBlockParams?.buildingBlockDefinitionKey),
-            map(buildingBlockParams => ({managementContext: 'buildingBlock' as ManagementContext, buildingBlockParams})),
+                    return params.managementContext === 'case'
+                        ? this.fetchTemplates(params.caseParams, null)
+                        : this.fetchTemplates(null, params.buildingBlockParams);
+                }),
+                map(results =>
+                    results?.content.map(template => ({
+                        id: template.key,
+                        text: template.key,
+                    })) || [],
+                ),
+                takeUntil(this._destroy$),
+            )
+            .subscribe(results => {
+                // the items are published before loading is cleared, so the form is rendered with the
+                // input type that initInputType() derives from them
+                this.templateItems$.next(results);
+                this.loading$.next(false);
+            });
+    }
+
+    /**
+     * Resolves the management context the template list is scoped to. Both sources always emit — a
+     * resolved context or null — so that a missing context is handled instead of stalling the view:
+     * `context$` emits a tuple with empty case params when the surrounding route is not case
+     * management, and the building block route params emit null when the route carries none. That is
+     * what happens when the action is configured from the process builder (Admin > Processes), where
+     * neither a case nor a building block definition is in scope.
+     */
+    private createResolvedContext(): Observable<ResolvedTemplateContext | null> {
+        const caseContext$: Observable<ResolvedTemplateContext | null> = (this.context$ ?? of(null)).pipe(
+            map(context => {
+                if (!context) {
+                    return null;
+                }
+
+                const [managementContext, caseParams] = context;
+
+                return managementContext === 'case' && !!caseParams?.caseDefinitionKey
+                    ? {managementContext: 'case' as const, caseParams}
+                    : null;
+            }),
         );
 
-        merge(caseParams$, buildingBlockParams$).pipe(
-            filter(params => !!params),
-            tap(params => this.captureContext(params!)),
-            switchMap(params => {
-                if (params!.managementContext === 'case') {
-                    return this.fetchTemplates((params as any).caseParams, null);
-                } else if (params!.managementContext === 'buildingBlock') {
-                    return this.fetchTemplates(null, (params as any).buildingBlockParams);
-                } else {
-                    console.error(`Freemarker plugin does not support '${params!.managementContext}' templates`);
-                    return of(null);
+        const buildingBlockContext$: Observable<ResolvedTemplateContext | null> = this.buildingBlockParams$.pipe(
+            map(buildingBlockParams =>
+                buildingBlockParams?.buildingBlockDefinitionKey
+                    ? {managementContext: 'buildingBlock' as const, buildingBlockParams}
+                    : null,
+            ),
+        );
+
+        return combineLatest([caseContext$, buildingBlockContext$]).pipe(
+            map(([caseContext, buildingBlockContext]) => buildingBlockContext ?? caseContext),
+            distinctUntilChanged((previous, current) => JSON.stringify(previous) === JSON.stringify(current)),
+            tap(params => {
+                if (params) {
+                    this.captureContext(params);
                 }
             }),
-            map(results =>
-                results?.content.map(template => ({
-                    id: template.key,
-                    text: template.key,
-                })) || [],
-            ),
-            tap(() => this.loading$.next(false)),
-            takeUntil(this._destroy$),
-        ).subscribe(results => this.templateItems$.next(results));
+            shareReplay({bufferSize: 1, refCount: false}),
+        );
     }
 
-    private captureContext(params: {
-        managementContext: ManagementContext;
-        caseParams?: CaseManagementParams;
-        buildingBlockParams?: BuildingBlockManagementParams;
-    }): void {
+    private captureContext(params: ResolvedTemplateContext): void {
         if (params.managementContext === 'case') {
             this.caseDefinitionKey$.next(params.caseParams?.caseDefinitionKey ?? null);
             this.caseDefinitionVersionTag$.next(params.caseParams?.caseDefinitionVersionTag ?? null);
-        } else if (params.managementContext === 'buildingBlock') {
+        } else {
             this.buildingBlockDefinitionKey$.next(params.buildingBlockParams?.buildingBlockDefinitionKey ?? null);
             this.buildingBlockDefinitionVersionTag$.next(params.buildingBlockParams?.buildingBlockDefinitionVersionTag ?? null);
         }
