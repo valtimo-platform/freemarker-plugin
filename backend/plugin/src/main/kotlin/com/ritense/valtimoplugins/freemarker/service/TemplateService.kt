@@ -121,7 +121,11 @@ class TemplateService(
         missingPlaceholderStrategy: MissingPlaceholderStrategy = THROW_ERROR_WHEN_MISSING_PLACEHOLDER,
     ): String {
         streamDocuments(
-            (document as JsonSchemaDocument?)?.definitionId()?.blueprintId()?.blueprintKey,
+            if (referencesDocs(templateContent)) {
+                (document as JsonSchemaDocument?)?.definitionId()?.blueprintId()?.blueprintKey
+            } else {
+                null
+            },
         ).use { documentsStream ->
             val dataModel = mutableMapOf<String, Any?>()
             document?.let {
@@ -536,6 +540,8 @@ class TemplateService(
             else -> mutableMapOf<String, Any>()
         }
 
+    private fun referencesDocs(templateContent: String): Boolean = DOCS_REFERENCE.containsMatchIn(" $templateContent ")
+
     private fun streamDocuments(blueprintKey: String?): Stream<JsonSchemaDocument> =
         if (blueprintKey == null) {
             emptyList<JsonSchemaDocument>().stream()
@@ -615,5 +621,6 @@ class TemplateService(
 
     companion object {
         private val logger = KotlinLogging.logger {}
+        private val DOCS_REFERENCE = Regex("[^A-z]docs[^A-z]")
     }
 }
