@@ -2,6 +2,10 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.5.5
+
+Valtimo bijgewerkt naar versie 13.41.0.
+
 ## 8.5.4
 
 Het genereren van een document was erg langzaam bij zaakdefinities met veel dossiers. Alle dossiers van het bouwblok
