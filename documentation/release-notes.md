@@ -2,6 +2,10 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.5.6
+
+Beveiligingsfix: FreeMarker bijgewerkt naar 2.3.35 (CVE-2026-84939).
+
 ## 8.5.5
 
 Valtimo bijgewerkt naar versie 13.41.0.
