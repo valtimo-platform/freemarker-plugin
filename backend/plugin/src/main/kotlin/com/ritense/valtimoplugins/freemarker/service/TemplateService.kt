@@ -445,7 +445,6 @@ class TemplateService(
                             error(
                                 "Failed to resolve '$placeholder' for template: '$templateName'",
                             )
-
                         REPLACE_MISSING_PLACEHOLDER_WITH_EMPTY_VALUE -> if (dummyValue is String) "" else dummyValue
                     }
                 logger.warn { "Unresolved placeholder '$placeholder'. Template: '$templateName'" }
