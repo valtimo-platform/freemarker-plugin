@@ -52,7 +52,7 @@ class TemplateManagementResource(
         @RequestParam(value = "caseDefinitionVersionTag", required = false) caseDefinitionVersionTag: String?,
         @RequestParam(value = "buildingBlockDefinitionKey", required = false) buildingBlockDefinitionKey: String?,
         @RequestParam(value = "buildingBlockDefinitionVersionTag", required = false) buildingBlockDefinitionVersionTag:
-        String?,
+            String?,
         @RequestParam(value = "templateType", required = false) templateType: String?,
         @RequestParam(value = "templateTypes", required = false) templateTypes: List<String>?,
         pageable: Pageable,
@@ -83,7 +83,7 @@ class TemplateManagementResource(
         @RequestParam(value = "caseDefinitionVersionTag", required = false) caseDefinitionVersionTag: String?,
         @RequestParam(value = "buildingBlockDefinitionKey", required = false) buildingBlockDefinitionKey: String?,
         @RequestParam(value = "buildingBlockDefinitionVersionTag", required = false) buildingBlockDefinitionVersionTag:
-        String?,
+            String?,
         @PathVariable templateType: String,
         @PathVariable key: String,
     ): ResponseEntity<TemplateResponse> {

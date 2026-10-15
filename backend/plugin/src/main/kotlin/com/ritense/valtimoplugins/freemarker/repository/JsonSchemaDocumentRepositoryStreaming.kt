@@ -19,12 +19,12 @@ package com.ritense.valtimoplugins.freemarker.repository
 import com.ritense.document.domain.Document
 import com.ritense.document.domain.impl.JsonSchemaDocument
 import jakarta.persistence.QueryHint
-import java.util.stream.Stream
 import org.hibernate.jpa.HibernateHints.HINT_FETCH_SIZE
 import org.hibernate.jpa.HibernateHints.HINT_READ_ONLY
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.jpa.repository.QueryHints
+import java.util.stream.Stream
 
 interface JsonSchemaDocumentRepositoryStreaming : JpaRepository<JsonSchemaDocument, Document.Id> {
     /**

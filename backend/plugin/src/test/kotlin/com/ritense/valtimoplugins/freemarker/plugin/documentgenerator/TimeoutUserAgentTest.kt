@@ -16,12 +16,12 @@
 
 package com.ritense.valtimoplugins.freemarker.plugin.documentgenerator
 
-import java.net.ServerSocket
-import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.junit.jupiter.api.Test
 import org.xhtmlrenderer.pdf.ITextOutputDevice
 import org.xhtmlrenderer.pdf.ITextRenderer
+import java.net.ServerSocket
+import java.time.Duration
 
 class TimeoutUserAgentTest {
     @Test

@@ -16,12 +16,12 @@
 
 package com.ritense.valtimoplugins.freemarker.plugin.documentgenerator
 
+import org.xhtmlrenderer.pdf.ITextOutputDevice
+import org.xhtmlrenderer.pdf.ITextUserAgent
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLConnection
 import java.time.Duration
-import org.xhtmlrenderer.pdf.ITextOutputDevice
-import org.xhtmlrenderer.pdf.ITextUserAgent
 
 /**
  * Loads images, stylesheets and fonts referenced by a PDF template with timeouts. Flying Saucer's default user agent

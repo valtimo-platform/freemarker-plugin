@@ -1,17 +1,17 @@
 {
-    "name": "@valtimo-plugins/freemarker",
-    "license": "EUPL-1.2",
-    "version": "8.5.8",
-    "scripts": {
-        "build": "ng build @valtimo-plugins/freemarker",
-        "watch": "ng build @valtimo-plugins/freemarker --watch"
-    },
-    "peerDependencies": {
-        "@angular/common": "19.2.25",
-        "@angular/core": "19.2.25",
-        "@angular/forms": "19.2.25"
-    },
-    "dependencies": {
-        "tslib": "2.8.1"
-    }
+  "name": "@valtimo-plugins/freemarker",
+  "license": "EUPL-1.2",
+  "version": "8.5.8",
+  "scripts": {
+    "build": "ng build @valtimo-plugins/freemarker",
+    "watch": "ng build @valtimo-plugins/freemarker --watch"
+  },
+  "peerDependencies": {
+    "@angular/common": "19.2.25",
+    "@angular/core": "19.2.25",
+    "@angular/forms": "19.2.25"
+  },
+  "dependencies": {
+    "tslib": "2.8.1"
+  }
 }

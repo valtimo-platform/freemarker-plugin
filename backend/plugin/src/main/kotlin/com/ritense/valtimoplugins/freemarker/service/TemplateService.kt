@@ -45,15 +45,15 @@ import freemarker.template.Configuration
 import freemarker.template.Template
 import freemarker.template.TemplateException
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.io.StringWriter
-import java.io.Writer
-import java.util.UUID
-import java.util.stream.Stream
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.io.StringWriter
+import java.io.Writer
+import java.util.UUID
+import java.util.stream.Stream
 import kotlin.random.Random
 
 @Service
@@ -425,10 +425,10 @@ class TemplateService(
                     newPlaceholders.keys.associate { newPlaceholder ->
                         try {
                             newPlaceholder to
-                                    valueResolverService.resolveValues(
-                                        document.id().toString(),
-                                        listOf(newPlaceholder),
-                                    )[newPlaceholder]
+                                valueResolverService.resolveValues(
+                                    document.id().toString(),
+                                    listOf(newPlaceholder),
+                                )[newPlaceholder]
                         } catch (ignore: Exception) {
                             newPlaceholder to null
                         }

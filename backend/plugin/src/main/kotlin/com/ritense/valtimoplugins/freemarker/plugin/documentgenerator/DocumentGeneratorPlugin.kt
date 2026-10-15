@@ -28,11 +28,6 @@ import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_CSV
 import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_PDF
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.OutputStream
-import java.io.OutputStreamWriter
-import java.io.StringReader
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.csv.CSVPrinter
@@ -40,6 +35,11 @@ import org.operaton.bpm.engine.delegate.DelegateExecution
 import org.operaton.bpm.engine.impl.context.Context
 import org.xhtmlrenderer.pdf.ITextOutputDevice
 import org.xhtmlrenderer.pdf.ITextRenderer
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.OutputStream
+import java.io.OutputStreamWriter
+import java.io.StringReader
 
 @Plugin(
     key = "document-generator",
@@ -110,9 +110,11 @@ open class DocumentGeneratorPlugin(
         out: OutputStream,
     ) {
         val outputDevice = ITextOutputDevice(ITextRenderer.DEFAULT_DOTS_PER_POINT)
-        val renderer = ITextRenderer(
-            outputDevice, TimeoutUserAgent(outputDevice, ITextRenderer.DEFAULT_DOTS_PER_PIXEL)
-        )
+        val renderer =
+            ITextRenderer(
+                outputDevice,
+                TimeoutUserAgent(outputDevice, ITextRenderer.DEFAULT_DOTS_PER_PIXEL),
+            )
         with(renderer) {
             sharedContext.isPrint = true
             sharedContext.isInteractive = false
@@ -159,8 +161,8 @@ open class DocumentGeneratorPlugin(
         if (Context.getJobExecutorContext() == null) {
             logger.warn {
                 "Generating a document in activity '${execution.currentActivityId}' outside the job executor. " +
-                        "This blocks the request (and its database connection) that triggered it. " +
-                        "Mark the service task as asynchronous (asyncBefore) to run it in the background."
+                    "This blocks the request (and its database connection) that triggered it. " +
+                    "Mark the service task as asynchronous (asyncBefore) to run it in the background."
             }
         }
     }

@@ -16,14 +16,13 @@
 
 package com.ritense.valtimoplugins.freemarker.plugin.documentgenerator
 
-import java.io.ByteArrayOutputStream
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
+import java.io.ByteArrayOutputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DocumentGeneratorPluginTest {
-
     @Test
     fun `should generate a pdf`() {
         val plugin = DocumentGeneratorPlugin(mock(), mock(), mock())

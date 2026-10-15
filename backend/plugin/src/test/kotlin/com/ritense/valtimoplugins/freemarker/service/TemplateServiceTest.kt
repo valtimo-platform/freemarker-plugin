@@ -27,8 +27,6 @@ import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
 import com.ritense.valtimoplugins.freemarker.repository.JsonSchemaDocumentRepositoryStreaming
 import com.ritense.valtimoplugins.freemarker.repository.TemplateRepository
 import com.ritense.valueresolver.ValueResolverService
-import java.util.Optional
-import java.util.stream.Stream
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -38,6 +36,8 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.data.jpa.domain.Specification
+import java.util.Optional
+import java.util.stream.Stream
 import kotlin.test.assertEquals
 
 class TemplateServiceTest {
@@ -137,7 +137,7 @@ class TemplateServiceTest {
                 templateName = "docs.txt",
                 templateContent =
                     "<#list docs as d>\${d.firstName}</#list>" +
-                            "<#if zaak.type == 'besluit'>,\${zaak.besluit}</#if>",
+                        "<#if zaak.type == 'besluit'>,\${zaak.besluit}</#if>",
                 document = document,
             )
 

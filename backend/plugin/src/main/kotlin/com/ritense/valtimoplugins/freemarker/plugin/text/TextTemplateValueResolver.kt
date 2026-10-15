@@ -29,10 +29,10 @@ import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_TEXT
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
 import com.ritense.valueresolver.ValueResolverFactory
 import com.ritense.valueresolver.ValueResolverOption
-import java.util.UUID
-import java.util.function.Function
 import org.operaton.bpm.engine.delegate.VariableScope
 import org.springframework.stereotype.Component
+import java.util.UUID
+import java.util.function.Function
 
 @Component
 @SkipComponentScan

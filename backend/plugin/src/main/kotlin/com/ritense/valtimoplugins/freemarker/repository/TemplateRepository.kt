@@ -17,9 +17,9 @@
 package com.ritense.valtimoplugins.freemarker.repository
 
 import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
-import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
+import java.util.UUID
 
 interface TemplateRepository :
     JpaRepository<ValtimoTemplate, UUID>,
