@@ -27,16 +27,19 @@ import com.ritense.resource.service.TemporaryResourceStorageService
 import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_CSV
 import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_PDF
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVParser
-import org.apache.commons.csv.CSVPrinter
-import org.operaton.bpm.engine.delegate.DelegateExecution
-import org.xhtmlrenderer.pdf.ITextRenderer
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.io.StringReader
+import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVParser
+import org.apache.commons.csv.CSVPrinter
+import org.operaton.bpm.engine.delegate.DelegateExecution
+import org.operaton.bpm.engine.impl.context.Context
+import org.xhtmlrenderer.pdf.ITextOutputDevice
+import org.xhtmlrenderer.pdf.ITextRenderer
 
 @Plugin(
     key = "document-generator",
@@ -59,6 +62,7 @@ open class DocumentGeneratorPlugin(
         @PluginActionProperty templateKey: String,
         @PluginActionProperty processVariableName: String,
     ) {
+        warnIfNotAsync(execution)
         val htmlString = generateDocumentContent(execution, templateKey, TEMPLATE_TYPE_PDF)
         ByteArrayOutputStream().use { outputStream ->
             generatePdf(htmlString, outputStream)
@@ -85,6 +89,7 @@ open class DocumentGeneratorPlugin(
         @PluginActionProperty templateKey: String,
         @PluginActionProperty processVariableName: String,
     ) {
+        warnIfNotAsync(execution)
         val csvString = generateDocumentContent(execution, templateKey, TEMPLATE_TYPE_CSV)
         ByteArrayOutputStream().use { outputStream ->
             generateCsv(csvString, outputStream)
@@ -104,7 +109,10 @@ open class DocumentGeneratorPlugin(
         htmlString: String,
         out: OutputStream,
     ) {
-        val renderer = ITextRenderer()
+        val outputDevice = ITextOutputDevice(ITextRenderer.DEFAULT_DOTS_PER_POINT)
+        val renderer = ITextRenderer(
+            outputDevice, TimeoutUserAgent(outputDevice, ITextRenderer.DEFAULT_DOTS_PER_PIXEL)
+        )
         with(renderer) {
             sharedContext.isPrint = true
             sharedContext.isInteractive = false
@@ -118,7 +126,7 @@ open class DocumentGeneratorPlugin(
         csvString: String,
         out: OutputStream,
     ) {
-        OutputStreamWriter(out).use { writer ->
+        OutputStreamWriter(out, Charsets.UTF_8).use { writer ->
             val reader = StringReader(csvString)
 
             val parser =
@@ -147,6 +155,16 @@ open class DocumentGeneratorPlugin(
         }
     }
 
+    private fun warnIfNotAsync(execution: DelegateExecution) {
+        if (Context.getJobExecutorContext() == null) {
+            logger.warn {
+                "Generating a document in activity '${execution.currentActivityId}' outside the job executor. " +
+                        "This blocks the request (and its database connection) that triggered it. " +
+                        "Mark the service task as asynchronous (asyncBefore) to run it in the background."
+            }
+        }
+    }
+
     private fun generateDocumentContent(
         execution: DelegateExecution,
         templateKey: String,
@@ -163,5 +181,9 @@ open class DocumentGeneratorPlugin(
             document = document,
             processVariables = execution.variables,
         )
+    }
+
+    companion object {
+        private val logger = KotlinLogging.logger {}
     }
 }

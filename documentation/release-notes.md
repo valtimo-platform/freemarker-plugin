@@ -2,6 +2,11 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.5.8
+
+Het genereren van documenten is sneller en betrouwbaarder bij zaaktypes met veel dossiers. Ook blijft het genereren van
+een PDF niet meer eindeloos hangen als een afbeelding of lettertype niet geladen kan worden.
+
 ## 8.5.7
 
 Ondersteuning voor Valtimo 13.48.0.

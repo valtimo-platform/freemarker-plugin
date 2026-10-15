@@ -16,11 +16,19 @@
 
 package com.ritense.valtimoplugins.freemarker.service
 
+import com.ritense.authorization.AuthorizationContext.Companion.runWithoutAuthorization
+import com.ritense.document.domain.Document
+import com.ritense.document.domain.impl.request.NewDocumentRequest
+import com.ritense.document.service.DocumentService
 import com.ritense.valtimo.contract.case_.CaseDefinitionId
+import com.ritense.valtimo.contract.json.MapperSingleton
 import com.ritense.valtimoplugins.freemarker.BaseIntegrationTest
+import com.ritense.valtimoplugins.freemarker.web.rest.dto.TemplateKeyType
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.transaction.annotation.Transactional
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -30,6 +38,9 @@ import kotlin.test.assertTrue
 class TemplateServiceIT : BaseIntegrationTest() {
     @Autowired
     lateinit var templateService: TemplateService
+
+    @Autowired
+    lateinit var documentService: DocumentService
 
     @BeforeEach
     internal fun setUp() {
@@ -94,4 +105,59 @@ class TemplateServiceIT : BaseIntegrationTest() {
 
         assertTrue(result.contains("Hello world"))
     }
+
+    @Test
+    fun `should list all documents of the same case type`() {
+        val document = createDocument("""{ "lastname": "Doe" }""")
+        createDocument("""{ "lastname": "Roe" }""")
+
+        val result =
+            templateService.generate(
+                templateName = "docs.csv",
+                templateContent = "<#list docs as d>\${d.lastname};</#list>",
+                document = document,
+            )
+
+        assertEquals(setOf("Doe", "Roe"), result.split(';').filter { it.isNotEmpty() }.toSet())
+    }
+
+    @Test
+    fun `should find a page of template keys`() {
+        val page =
+            templateService.findTemplateKeys(
+                caseDefinitionId = CaseDefinitionId("profile", "1.0.0"),
+                templateType = "mail",
+                pageable = PageRequest.of(0, 1, Sort.by("key")),
+            )
+
+        assertEquals(listOf(TemplateKeyType("letter-template", "mail")), page.content)
+        assertEquals(2, page.totalElements)
+    }
+
+    @Test
+    fun `should find template keys of several types`() {
+        val keys =
+            templateService.findTemplateKeys(
+                caseDefinitionId = CaseDefinitionId("profile", "1.0.0"),
+                templateTypes = listOf("mail", "text"),
+            )
+
+        assertEquals(
+            setOf(
+                TemplateKeyType("letter-template", "mail"),
+                TemplateKeyType("placeholder-test-template", "mail"),
+                TemplateKeyType("text-letter-template", "text"),
+            ),
+            keys.content.toSet(),
+        )
+    }
+
+    private fun createDocument(content: String): Document =
+        runWithoutAuthorization {
+            documentService
+                .createDocument(
+                    NewDocumentRequest("profile", "profile", "1.0.0", MapperSingleton.get().readTree(content)),
+                ).resultingDocument()
+                .orElseThrow()
+        }
 }
