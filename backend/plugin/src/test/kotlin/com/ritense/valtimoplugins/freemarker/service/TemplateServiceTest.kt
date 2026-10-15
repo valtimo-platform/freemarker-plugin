@@ -32,9 +32,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.data.jpa.domain.Specification
 import java.util.Optional
@@ -109,7 +109,7 @@ class TemplateServiceTest {
             )
 
         assertEquals("Klaas", result)
-        verify(jsonSchemaDocumentRepositoryStreaming, never()).streamContentByBlueprintKey(any())
+        verifyNoInteractions(jsonSchemaDocumentRepositoryStreaming)
     }
 
     @Test
@@ -122,7 +122,7 @@ class TemplateServiceTest {
             )
 
         assertEquals("Required docs: Klaas", result)
-        verify(jsonSchemaDocumentRepositoryStreaming, never()).streamContentByBlueprintKey(any())
+        verifyNoInteractions(jsonSchemaDocumentRepositoryStreaming)
     }
 
     @Test
