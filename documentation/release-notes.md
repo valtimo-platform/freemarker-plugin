@@ -2,6 +2,18 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.5.8
+
+Het genereren van documenten is sneller en betrouwbaarder bij zaaktypes met veel dossiers. Ook blijft het genereren van
+een PDF niet meer eindeloos hangen als de server van een afbeelding, stylesheet of lettertype niet antwoordt. Een
+sjabloon kan `docs` nu meerdere keren doorlopen, en `docs` combineren met waarden die opgezocht moeten worden.
+
+De acties 'Generate PDF' en 'Generate CSV' loggen een waarschuwing als ze niet asynchroon draaien. Markeer zo'n
+servicetaak als asynchroon (asyncBefore), zodat de gebruiker niet hoeft te wachten tot het document gegenereerd is.
+
+Een sjabloonvoorbeeld met speciale tekens in de bestandsnaam wordt nu met de volledige naam gedownload. Een sjabloon
+genereren op sleutel zonder procesvariabelen (`TemplateService.generate`) liep vast in een StackOverflowError.
+
 ## 8.5.7
 
 Ondersteuning voor Valtimo 13.48.0.

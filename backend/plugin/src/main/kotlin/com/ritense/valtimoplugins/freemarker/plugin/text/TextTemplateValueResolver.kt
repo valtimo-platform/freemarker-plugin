@@ -87,34 +87,37 @@ class TextTemplateValueResolver(
     override fun getResolvableKeyOptions(caseDefinitionId: CaseDefinitionId): List<ValueResolverOption> {
         val templateKeys =
             templateService
-                .findTemplates(
+                .findTemplateKeys(
                     caseDefinitionId = caseDefinitionId,
                     templateType = TEMPLATE_TYPE_TEXT,
-                ).map { it.key }
+                ).content
+                .map { it.key }
         return createFieldList(templateKeys)
     }
 
     override fun getResolvableKeyOptions(blueprintId: BlueprintId): List<ValueResolverOption> {
         val templateKeys =
             templateService
-                .findTemplates(
+                .findTemplateKeys(
                     buildingBlockDefinitionId =
                         BuildingBlockDefinitionId(
                             blueprintId.getIdKey(),
                             blueprintId.getTagPrefix(),
                         ),
                     templateType = TEMPLATE_TYPE_TEXT,
-                ).map { it.key }
+                ).content
+                .map { it.key }
         return createFieldList(templateKeys)
     }
 
     override fun getResolvableKeyOptions(caseDefinitionKey: String): List<ValueResolverOption> {
         val templateKeys =
             templateService
-                .findTemplates(
+                .findTemplateKeys(
                     caseDefinitionId = null,
                     templateType = TEMPLATE_TYPE_TEXT,
-                ).map { it.key }
+                ).content
+                .map { it.key }
         return createFieldList(templateKeys)
     }
 

@@ -18,6 +18,7 @@ package com.ritense.valtimoplugins.freemarker.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.ritense.document.domain.Document
 import com.ritense.document.domain.impl.JsonSchemaDocument
 import com.ritense.valtimo.contract.annotation.SkipComponentScan
@@ -50,6 +51,7 @@ import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.io.StringWriter
+import java.io.Writer
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.random.Random
@@ -75,6 +77,7 @@ class TemplateService(
             templateKey = templateKey,
             templateType = templateType,
             document = document,
+            processVariables = emptyMap(),
         )
 
     fun generate(
@@ -120,18 +123,12 @@ class TemplateService(
         document: Document? = null,
         missingPlaceholderStrategy: MissingPlaceholderStrategy = THROW_ERROR_WHEN_MISSING_PLACEHOLDER,
     ): String {
-        streamDocuments(
-            if (referencesDocs(templateContent)) {
-                (document as JsonSchemaDocument?)?.definitionId()?.blueprintId()?.blueprintKey
-            } else {
-                null
-            },
-        ).use { documentsStream ->
+        LazyDocuments((document as JsonSchemaDocument?)?.definitionId()?.blueprintId()?.blueprintKey).use { docs ->
             val dataModel = mutableMapOf<String, Any?>()
             document?.let {
                 dataModel["doc"] = objectMapper.convertValue<Map<String, Any?>>(document.content().asJson())
+                dataModel["docs"] = docs
             }
-            document?.let { dataModel["docs"] = streamToMap(documentsStream) }
             dataModel["pv"] = processVariables
 
             val template = Template(UUID.randomUUID().toString(), templateContent, freemarkerConfiguration)
@@ -139,6 +136,12 @@ class TemplateService(
 
             for (i in 1..10) {
                 try {
+                    // Re-check without docs before querying them again
+                    if (exceptionCaught != null && docs.isQueried()) {
+                        template
+                            .createProcessingEnvironment(dataModel + ("docs" to emptyList<Any>()), Writer.nullWriter())
+                            .process()
+                    }
                     val writer = StringWriter()
                     template.createProcessingEnvironment(dataModel, writer).process()
                     return writer.toString()
@@ -146,7 +149,7 @@ class TemplateService(
                     if (!resolveDataModel(
                             document = document,
                             templateName = templateName,
-                            templateContent = templateContent,
+                            template = template,
                             incompleteDataModel = dataModel,
                             missingPlaceholderStrategy = missingPlaceholderStrategy,
                         )
@@ -163,9 +166,18 @@ class TemplateService(
     fun findPlaceholders(
         templateContent: String,
         incompleteDataModel: Map<String, Any?> = mutableMapOf(),
+    ): Map<String, Any> =
+        findPlaceholders(
+            Template(UUID.randomUUID().toString(), templateContent, freemarkerConfiguration),
+            incompleteDataModel,
+        )
+
+    private fun findPlaceholders(
+        template: Template,
+        incompleteDataModel: Map<String, Any?>,
     ): Map<String, Any> {
         // Might not find placeholders that are hidden behind a freemarker-condition
-        val completeDataModel = findCompleteDataModelWithDummyData(templateContent, incompleteDataModel)
+        val completeDataModel = findCompleteDataModelWithDummyData(template, incompleteDataModel)
         return extractPlaceholders(completeDataModel)
     }
 
@@ -204,6 +216,26 @@ class TemplateService(
                 templateTypes = templateTypes,
             )
         return templateRepository.findAll(query)
+    }
+
+    /** Like [findTemplates], but without loading the content and metadata of every template. */
+    fun findTemplateKeys(
+        templateKey: String? = null,
+        caseDefinitionId: CaseDefinitionId? = null,
+        buildingBlockDefinitionId: BuildingBlockDefinitionId? = null,
+        templateType: String? = null,
+        templateTypes: List<String>? = null,
+        pageable: Pageable = Pageable.unpaged(),
+    ): Page<TemplateKeyType> {
+        val query =
+            buildSpecification(
+                templateKey = templateKey,
+                caseDefinitionId = caseDefinitionId,
+                buildingBlockDefinitionId = buildingBlockDefinitionId,
+                templateType = templateType,
+                templateTypes = templateTypes,
+            )
+        return templateRepository.findKeyTypes(query, pageable)
     }
 
     fun findTemplate(
@@ -374,14 +406,14 @@ class TemplateService(
 
     private fun resolveDataModel(
         templateName: String,
-        templateContent: String,
+        template: Template,
         document: Document? = null,
         incompleteDataModel: MutableMap<String, Any?> = mutableMapOf(),
         missingPlaceholderStrategy: MissingPlaceholderStrategy = THROW_ERROR_WHEN_MISSING_PLACEHOLDER,
     ): Boolean {
         val resolvedPlaceholders = extractPlaceholders(incompleteDataModel)
         val newPlaceholders =
-            findPlaceholders(templateContent, incompleteDataModel)
+            findPlaceholders(template, incompleteDataModel)
                 .filter { !resolvedPlaceholders.keys.contains(it.key) }
         val resolvedValues =
             if (document == null) {
@@ -479,17 +511,19 @@ class TemplateService(
     }
 
     private fun findCompleteDataModelWithDummyData(
-        templateContent: String,
-        incompleteDataModel: Map<String, Any?> = mutableMapOf(),
+        template: Template,
+        incompleteDataModel: Map<String, Any?>,
     ): Map<String, Any?> {
         val dataModel = incompleteDataModel.toMutableMap()
-        val template = Template(UUID.randomUUID().toString(), templateContent, freemarkerConfiguration)
+        // Placeholder discovery renders the template many times; don't query all documents on every render.
+        if (dataModel["docs"] is LazyDocuments) {
+            dataModel["docs"] = emptyList<Any>()
+        }
         var prevPlaceholder: String? = null
         var dummyValueIndex = 0
         for (i in 1..100) {
             try {
-                val writer = StringWriter()
-                template.createProcessingEnvironment(dataModel, writer).process()
+                template.createProcessingEnvironment(dataModel, Writer.nullWriter()).process()
                 break
             } catch (e: TemplateException) {
                 val missingPlaceholder = e.blamedExpressionString?.substringBefore(' ') ?: prevPlaceholder
@@ -540,26 +574,29 @@ class TemplateService(
             else -> mutableMapOf<String, Any>()
         }
 
-    private fun referencesDocs(templateContent: String): Boolean = DOCS_REFERENCE.containsMatchIn(" $templateContent ")
+    /**
+     * The `docs` variable. Documents are only queried when the template iterates over them, and every iteration
+     * opens a fresh stream, so a template can list `docs` more than once.
+     */
+    private inner class LazyDocuments(
+        private val blueprintKey: String?,
+    ) : Iterable<Map<String, Any?>>,
+        AutoCloseable {
+        private val openStreams = mutableListOf<Stream<String>>()
 
-    private fun streamDocuments(blueprintKey: String?): Stream<JsonSchemaDocument> =
-        if (blueprintKey == null) {
-            emptyList<JsonSchemaDocument>().stream()
-        } else {
-            jsonSchemaDocumentRepositoryStreaming
-                .streamAllByBluePrintKey(blueprintKey)
-        }
+        fun isQueried() = openStreams.isNotEmpty()
 
-    private fun streamToMap(stream: Stream<JsonSchemaDocument>): Iterable<Map<String, Any?>> =
-        Iterable {
-            val iterator = stream.iterator()
-            object : Iterator<Map<String, Any?>> {
-                override fun hasNext(): Boolean = iterator.hasNext()
-
-                override fun next(): Map<String, Any?> =
-                    objectMapper.convertValue<Map<String, Any?>>(iterator.next().content().asJson())
+        override fun iterator(): Iterator<Map<String, Any?>> {
+            if (blueprintKey == null) {
+                return emptyList<Map<String, Any?>>().iterator()
             }
+            val stream = jsonSchemaDocumentRepositoryStreaming.streamContentByBlueprintKey(blueprintKey)
+            openStreams += stream
+            return stream.map { objectMapper.readValue<Map<String, Any?>>(it) }.iterator()
         }
+
+        override fun close() = openStreams.forEach { it.close() }
+    }
 
     private fun defaultTemplateContent(templateType: String): String =
         when (templateType) {
@@ -621,6 +658,5 @@ class TemplateService(
 
     companion object {
         private val logger = KotlinLogging.logger {}
-        private val DOCS_REFERENCE = Regex("[^A-z]docs[^A-z]")
     }
 }

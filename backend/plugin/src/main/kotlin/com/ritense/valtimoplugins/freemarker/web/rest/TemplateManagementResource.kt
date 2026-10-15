@@ -66,7 +66,7 @@ class TemplateManagementResource(
                 BuildingBlockDefinitionId(buildingBlockDefinitionKey, buildingBlockDefinitionVersionTag!!)
             }
         val templates =
-            templateService.findTemplates(
+            templateService.findTemplateKeys(
                 templateKey = templateKey,
                 caseDefinitionId = caseDefinitionId,
                 buildingBlockDefinitionId = buildingBlockDefinitionId,
@@ -74,7 +74,7 @@ class TemplateManagementResource(
                 templateTypes = templateTypes,
                 pageable = pageable,
             )
-        return ResponseEntity.ok(templates.map { TemplateListItemResponse.of(it) })
+        return ResponseEntity.ok(templates.map { TemplateListItemResponse(key = it.key, type = it.type) })
     }
 
     @GetMapping("/v1/template-type/{templateType}/template/{key}")

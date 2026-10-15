@@ -23,4 +23,5 @@ import java.util.UUID
 
 interface TemplateRepository :
     JpaRepository<ValtimoTemplate, UUID>,
-    JpaSpecificationExecutor<ValtimoTemplate>
+    JpaSpecificationExecutor<ValtimoTemplate>,
+    TemplateRepositoryCustom

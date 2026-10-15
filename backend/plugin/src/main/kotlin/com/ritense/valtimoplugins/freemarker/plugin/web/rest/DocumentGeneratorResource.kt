@@ -23,6 +23,7 @@ import com.ritense.valtimoplugins.freemarker.model.MissingPlaceholderStrategy.SH
 import com.ritense.valtimoplugins.freemarker.plugin.documentgenerator.DocumentGeneratorPlugin
 import com.ritense.valtimoplugins.freemarker.plugin.web.rest.dto.TemplatePreviewRequest
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
+import org.springframework.http.ContentDisposition
 import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_OCTET_STREAM
 import org.springframework.http.MediaType.APPLICATION_PDF
@@ -76,8 +77,13 @@ class DocumentGeneratorResource(
 
         return ResponseEntity
             .ok()
-            .header("Content-Disposition", "attachment;filename=${request.fileName}")
-            .contentType(fileMediaType)
+            .headers {
+                it.contentDisposition =
+                    ContentDisposition
+                        .attachment()
+                        .filename(request.fileName, Charsets.UTF_8)
+                        .build()
+            }.contentType(fileMediaType)
             .body(stream)
     }
 }
