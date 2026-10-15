@@ -18,8 +18,10 @@ package com.ritense.valtimoplugins.freemarker.plugin.documentgenerator
 
 import org.xhtmlrenderer.pdf.ITextOutputDevice
 import org.xhtmlrenderer.pdf.ITextUserAgent
+import org.xhtmlrenderer.util.FontUtil.isEmbeddedBase64Font
+import java.io.InputStream
 import java.net.HttpURLConnection
-import java.net.URI
+import java.net.URL
 import java.net.URLConnection
 import java.time.Duration
 
@@ -33,8 +35,17 @@ class TimeoutUserAgent(
     private val connectTimeout: Duration = Duration.ofSeconds(5),
     private val readTimeout: Duration = Duration.ofSeconds(15),
 ) : ITextUserAgent(outputDevice, dotsPerPixel) {
+    // Flying Saucer would pass an unresolvable URI on as null, which this Kotlin class's openConnection rejects
+    override fun resolveAndOpenStream(uri: String?): InputStream? =
+        if (resolveURI(uri) == null && !(uri != null && isEmbeddedBase64Font(uri))) {
+            null
+        } else {
+            super.resolveAndOpenStream(uri)
+        }
+
+    @Suppress("DEPRECATION") // URL(uri), like Flying Saucer, fails with an IOException it handles; URI(uri) does not
     override fun openConnection(uri: String): URLConnection {
-        val connection = withTimeouts(URI(uri).toURL().openConnection())
+        val connection = withTimeouts(URL(uri).openConnection())
         connection.setRequestProperty("Accept", "*/*")
         return if (connection is HttpURLConnection) {
             // A redirect opens a new connection, which needs the timeouts as well.

@@ -93,6 +93,15 @@ class DocumentGeneratorPluginTest {
     }
 
     @Test
+    fun `should leave out an image whose url cannot be resolved`() {
+        val out = ByteArrayOutputStream()
+
+        plugin.generatePdf("<html><body><img src=\"http://example.com/a b|c.png\"/></body></html>", out)
+
+        assertTrue(out.toString(Charsets.ISO_8859_1).startsWith("%PDF-"))
+    }
+
+    @Test
     fun `should write a csv as UTF-8`() {
         val out = ByteArrayOutputStream()
 
