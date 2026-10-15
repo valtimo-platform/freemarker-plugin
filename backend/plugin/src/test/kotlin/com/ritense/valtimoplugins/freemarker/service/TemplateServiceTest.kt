@@ -29,6 +29,7 @@ import com.ritense.valtimoplugins.freemarker.repository.TemplateRepository
 import com.ritense.valueresolver.ValueResolverService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -39,6 +40,7 @@ import org.springframework.data.jpa.domain.Specification
 import java.util.Optional
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class TemplateServiceTest {
     private lateinit var templateRepository: TemplateRepository
@@ -121,6 +123,23 @@ class TemplateServiceTest {
 
         assertEquals("Required docs: Klaas", result)
         verify(jsonSchemaDocumentRepositoryStreaming, never()).streamContentByBlueprintKey(any())
+    }
+
+    @Test
+    fun `should close the documents stream when rendering fails`() {
+        var closed = false
+        whenever(jsonSchemaDocumentRepositoryStreaming.streamContentByBlueprintKey(BLUEPRINT_KEY))
+            .thenReturn(Stream.of("""{"firstName":"Anna"}""").onClose { closed = true })
+
+        assertThrows<Exception> {
+            templateService.generate(
+                templateName = "docs.txt",
+                templateContent = "<#list docs as d>\${d.firstName}</#list>\${zaak.unknown}",
+                document = document,
+            )
+        }
+
+        assertTrue(closed)
     }
 
     @Test

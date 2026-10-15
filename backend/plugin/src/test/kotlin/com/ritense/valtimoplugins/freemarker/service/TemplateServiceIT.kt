@@ -18,12 +18,19 @@ package com.ritense.valtimoplugins.freemarker.service
 
 import com.ritense.authorization.AuthorizationContext.Companion.runWithoutAuthorization
 import com.ritense.document.domain.Document
+import com.ritense.document.domain.impl.JsonSchemaDocument
 import com.ritense.document.domain.impl.request.NewDocumentRequest
 import com.ritense.document.service.DocumentService
 import com.ritense.valtimo.contract.case_.CaseDefinitionId
 import com.ritense.valtimo.contract.json.MapperSingleton
 import com.ritense.valtimoplugins.freemarker.BaseIntegrationTest
+import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
+import com.ritense.valtimoplugins.freemarker.repository.JsonSchemaDocumentRepositoryStreaming
 import com.ritense.valtimoplugins.freemarker.web.rest.dto.TemplateKeyType
+import freemarker.template.TemplateMethodModelEx
+import jakarta.persistence.EntityManager
+import org.hibernate.Session
+import org.hibernate.engine.spi.EntityKey
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -41,6 +48,12 @@ class TemplateServiceIT : BaseIntegrationTest() {
 
     @Autowired
     lateinit var documentService: DocumentService
+
+    @Autowired
+    lateinit var jsonSchemaDocumentRepositoryStreaming: JsonSchemaDocumentRepositoryStreaming
+
+    @Autowired
+    lateinit var entityManager: EntityManager
 
     @BeforeEach
     internal fun setUp() {
@@ -151,6 +164,85 @@ class TemplateServiceIT : BaseIntegrationTest() {
             keys.content.toSet(),
         )
     }
+
+    @Test
+    fun `should not load document entities while listing docs`() {
+        val document = createDocument("""{ "lastname": "Doe" }""")
+        createDocument("""{ "lastname": "Roe" }""")
+        entityManager.flush()
+        entityManager.clear()
+
+        val result =
+            templateService.generate(
+                templateName = "docs.csv",
+                templateContent = "<#list docs as d>\${d.lastname};</#list>",
+                document = document,
+            )
+
+        assertEquals(setOf("Doe", "Roe"), result.split(';').filter { it.isNotEmpty() }.toSet())
+        assertEquals(0, loadedEntityCount(JsonSchemaDocument::class.java))
+    }
+
+    @Test
+    fun `should stream documents through a database cursor`() {
+        // More documents than the fetch size, so the driver can't read the whole result in one go
+        val document = createDocument("""{ "lastname": "Doe" }""")
+        repeat(500) { createDocument("""{ "lastname": "Roe" }""") }
+        entityManager.flush()
+        entityManager.clear()
+        val openCursors =
+            TemplateMethodModelEx {
+                entityManager
+                    .createNativeQuery("SELECT count(*) FROM pg_cursors WHERE statement NOT ILIKE '%pg_cursors%'")
+                    .singleResult
+                    .toString()
+            }
+
+        val result =
+            templateService.generate(
+                templateName = "docs.txt",
+                templateContent = "<#list docs as d><#if d?is_first>\${pv.openCursors()}</#if></#list>",
+                processVariables = mapOf("openCursors" to openCursors),
+                document = document,
+            )
+
+        assertEquals("1", result)
+    }
+
+    @Test
+    @Suppress("DEPRECATION")
+    fun `should still stream documents through the deprecated method`() {
+        val document = createDocument("""{ "lastname": "Doe" }""") as JsonSchemaDocument
+        val blueprintKey = document.definitionId().blueprintId().blueprintKey
+
+        val ids =
+            jsonSchemaDocumentRepositoryStreaming.streamAllByBluePrintKey(blueprintKey).use {
+                it.map { d -> d.id() }.toList()
+            }
+
+        assertTrue(ids.contains(document.id()))
+    }
+
+    @Test
+    fun `should not load templates when finding template keys`() {
+        entityManager.clear()
+
+        val keys =
+            templateService.findTemplateKeys(
+                caseDefinitionId = CaseDefinitionId("profile", "1.0.0"),
+                templateType = "mail",
+            )
+
+        assertEquals(2, keys.totalElements)
+        assertEquals(0, loadedEntityCount(ValtimoTemplate::class.java))
+    }
+
+    private fun loadedEntityCount(entityClass: Class<*>): Int =
+        entityManager
+            .unwrap(Session::class.java)
+            .statistics.entityKeys
+            .filterIsInstance<EntityKey>()
+            .count { it.entityName == entityClass.name }
 
     private fun createDocument(content: String): Document =
         runWithoutAuthorization {
