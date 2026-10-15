@@ -27,6 +27,14 @@ import org.springframework.data.jpa.repository.QueryHints
 import java.util.stream.Stream
 
 interface JsonSchemaDocumentRepositoryStreaming : JpaRepository<JsonSchemaDocument, Document.Id> {
+    @Deprecated("Loads every document entity. Use streamContentByBlueprintKey instead.")
+    @Query(
+        """SELECT d
+        FROM JsonSchemaDocument d
+        WHERE d.documentDefinitionId.blueprintId.blueprintKey = :blueprintKey""",
+    )
+    fun streamAllByBluePrintKey(blueprintKey: String): Stream<JsonSchemaDocument>
+
     /**
      * Streams only the JSON content: no entities enter the persistence context and no eager associations are loaded.
      * The fetch size makes the PostgreSQL driver use a cursor instead of buffering the whole result set.
