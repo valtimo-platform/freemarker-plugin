@@ -7,6 +7,11 @@ Overzicht van wijzigingen per versie van de Freemarker-plugin.
 Het genereren van documenten is sneller en betrouwbaarder bij zaaktypes met veel dossiers. Ook blijft het genereren van
 een PDF niet meer eindeloos hangen als een afbeelding of lettertype niet geladen kan worden.
 
+De acties 'Generate PDF' en 'Generate CSV' loggen een waarschuwing als ze niet asynchroon draaien. Markeer zo'n
+servicetaak als asynchroon (asyncBefore), zodat de gebruiker niet hoeft te wachten tot het document gegenereerd is.
+
+Een sjabloonvoorbeeld met speciale tekens in de bestandsnaam wordt nu met de volledige naam gedownload.
+
 ## 8.5.7
 
 Ondersteuning voor Valtimo 13.48.0.
