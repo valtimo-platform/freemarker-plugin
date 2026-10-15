@@ -35,7 +35,7 @@ class TimeoutUserAgent(
     private val connectTimeout: Duration = Duration.ofSeconds(5),
     private val readTimeout: Duration = Duration.ofSeconds(15),
 ) : ITextUserAgent(outputDevice, dotsPerPixel) {
-    // Flying Saucer would pass an unresolvable URI on as null, which this Kotlin class's openConnection rejects
+    // Unresolvable URI: skip it, openConnection rejects null
     override fun resolveAndOpenStream(uri: String?): InputStream? =
         if (resolveURI(uri) == null && !(uri != null && isEmbeddedBase64Font(uri))) {
             null
@@ -43,7 +43,7 @@ class TimeoutUserAgent(
             super.resolveAndOpenStream(uri)
         }
 
-    @Suppress("DEPRECATION") // URL(uri), like Flying Saucer, fails with an IOException it handles; URI(uri) does not
+    @Suppress("DEPRECATION") // URL(uri) throws an IOException Flying Saucer handles
     override fun openConnection(uri: String): URLConnection {
         val connection = withTimeouts(URL(uri).openConnection())
         connection.setRequestProperty("Accept", "*/*")

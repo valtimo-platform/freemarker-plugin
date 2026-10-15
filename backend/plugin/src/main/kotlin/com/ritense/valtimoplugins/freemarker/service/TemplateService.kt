@@ -136,7 +136,7 @@ class TemplateService(
 
             for (i in 1..10) {
                 try {
-                    // After a failed render, check without docs that all placeholders resolve before querying them again
+                    // Re-check without docs before querying them again
                     if (exceptionCaught != null && docs.isQueried()) {
                         template
                             .createProcessingEnvironment(dataModel + ("docs" to emptyList<Any>()), Writer.nullWriter())
