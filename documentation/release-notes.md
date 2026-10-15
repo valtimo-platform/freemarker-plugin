@@ -5,7 +5,8 @@ Overzicht van wijzigingen per versie van de Freemarker-plugin.
 ## 8.5.8
 
 Het genereren van documenten is sneller en betrouwbaarder bij zaaktypes met veel dossiers. Ook blijft het genereren van
-een PDF niet meer eindeloos hangen als een afbeelding of lettertype niet geladen kan worden.
+een PDF niet meer eindeloos hangen als een afbeelding of lettertype niet geladen kan worden. Een sjabloon kan `docs` nu
+meerdere keren doorlopen, en `docs` combineren met waarden die opgezocht moeten worden.
 
 De acties 'Generate PDF' en 'Generate CSV' loggen een waarschuwing als ze niet asynchroon draaien. Markeer zo'n
 servicetaak als asynchroon (asyncBefore), zodat de gebruiker niet hoeft te wachten tot het document gegenereerd is.
