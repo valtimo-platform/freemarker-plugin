@@ -2,6 +2,12 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
+## 8.5.9
+
+De actie 'Generate Mail Content' is niet langer verouderd en kan weer gewoon gebruikt worden. Deze actie is handig als
+iemand een mail eerst wil bekijken voordat die verstuurd wordt, bijvoorbeeld met de e-mailvoorbeeldcomponent. Voor mails
+langer dan 4000 tekens is Valtimo 13.51.0 of hoger nodig.
+
 ## 8.5.8
 
 Het genereren van documenten is sneller en betrouwbaarder bij zaaktypes met veel dossiers. Ook blijft het genereren van

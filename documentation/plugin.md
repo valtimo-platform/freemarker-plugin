@@ -13,6 +13,14 @@ For creating HTML mail templates with Freemarker.
 | Generate Mail File    | `generate-mail-file`    | Generates HTML based on a mail template and saves it as a temporary file. The resource ID is stored in the specified process variable. |
 | Generate Mail Content | `generate-mail-content` | Generates HTML text based on a mail template and saves the text directly in a process variable.                                        |
 
+Use **Generate Mail Content** when someone needs to check a mail before it is sent. The mail text stays available for as
+long as the process runs. You can show it to a user with the
+[e-mail preview component](https://docs.valtimo.nl/configuration-guides/cases/forms/email-preview-component) and send
+it afterwards with the SMTP plugin (set its content to `pv:<processVariableName>`).
+
+**Generate Mail File** is less suited for this: its temporary file is cleaned up after a while and may already be gone
+when someone opens the task. Mails longer than 4000 characters need Valtimo 13.51.0 or later.
+
 ### Action properties
 
 - `mailTemplateKey` — The key of the mail template to use for generation. In the configuration screen the key can be
