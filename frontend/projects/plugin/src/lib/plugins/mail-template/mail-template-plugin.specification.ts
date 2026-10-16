@@ -32,13 +32,13 @@ const mailTemplatePluginSpecification: PluginSpecification = {
     nl: {
       title: "Mail sjablonen",
       "generate-mail-file": "Genereer Mailbestand",
-      "generate-mail-content": "Genereer Mailinhoud (verouderd)",
+      "generate-mail-content": "Genereer Mailinhoud",
       description: "Maak Mail sjablonen met Freemarker.",
       configurationTitle: "Configuratienaam",
       configurationTitleTooltip:
         "De naam van de huidige plug-in configuratie. Onder deze naam kan de configuratie worden gevonden in de rest van de applicatie.",
       generateMailContentDescription:
-        'Deze actie is verouderd. Gebruik "Genereer Mailbestand". Deze actie genereert de inhoud van een mail op basis van een sjabloon. De mail tekst wordt opgeslagen in een Proces Variabele.',
+        'Deze actie genereert de inhoud van een mail op basis van een sjabloon. De mail tekst wordt opgeslagen in een Proces Variabele. Gebruik deze actie als de mail eerst bekeken moet worden, bijvoorbeeld met de e-mailvoorbeeldcomponent. Voor mails langer dan 4000 tekens is Valtimo 13.51.0 of hoger nodig.',
       generateMailFileDescription:
         "Deze actie genereert de inhoud van een mail en slaat het resultaat op in een tijdelijk bestand. Het ID van het bestand wordt opgeslagen in een Proces Variabele.",
       mailTemplateKey: "Mail sjabloon",
@@ -58,13 +58,13 @@ const mailTemplatePluginSpecification: PluginSpecification = {
     en: {
       title: "Mail Templates",
       "generate-mail-file": "Generate Mail File",
-      "generate-mail-content": "Generate Mail Content (deprecated)",
+      "generate-mail-content": "Generate Mail Content",
       description: "Create mail templates with Freemarker.",
       configurationTitle: "Configuration Name",
       configurationTitleTooltip:
         "The name of the current plug-in configuration. The configuration can be found under this name in the rest of the application.",
       generateMailContentDescription:
-        'This action generates the content of an mail based on a template. The mail text is then stored in a Process Variable. This action is deprecated because the mail text can be bigger than a Process Variable can store. Please use action "Generate Mail File" instead',
+        'This action generates the content of a mail based on a template. The mail text is then stored in a Process Variable. Use this action when the mail has to be reviewed first, for example with the e-mail preview component. Mails longer than 4000 characters require Valtimo 13.51.0 or later.',
       generateMailFileDescription:
         "This action generates the content of an mail and saves the result in a temporary file. The file ID is then stored in a Process Variable.",
       mailTemplateKey: "Mail Template",
