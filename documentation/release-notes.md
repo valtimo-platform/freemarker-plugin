@@ -2,7 +2,7 @@
 
 Overzicht van wijzigingen per versie van de Freemarker-plugin.
 
-## 8.5.10
+## 8.6.0
 
 Een waarde die een mail- of PDF-sjabloon invult, zoals een naam uit het dossier, verschijnt nu als gewone tekst.
 Een naam als `Jansen & Zn.` laat het genereren van een PDF niet meer mislukken, en een ingevulde waarde kan geen opmaak,
