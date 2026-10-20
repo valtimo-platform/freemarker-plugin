@@ -125,16 +125,20 @@ export class DocumentTemplateListComponent implements OnInit {
                 type: data.type,
                 content: ''
             }))
-        ).subscribe(template => {
-            this.showAddModal$.next(false);
-            this.gotoDocumentTemplateEditor(
-                template.caseDefinitionKey,
-                template.caseDefinitionVersionTag,
-                template.buildingBlockDefinitionKey,
-                template.buildingBlockDefinitionVersionTag,
-                template.key,
-                template.type
-            );
+        ).subscribe({
+            next: template => {
+                this.showAddModal$.next(false);
+                this.gotoDocumentTemplateEditor(
+                    template.caseDefinitionKey,
+                    template.caseDefinitionVersionTag,
+                    template.buildingBlockDefinitionKey,
+                    template.buildingBlockDefinitionVersionTag,
+                    template.key,
+                    template.type
+                );
+            },
+            // the modal has already reset its form, so it can't be retried
+            error: () => this.showAddModal$.next(false),
         });
     }
 
@@ -154,8 +158,10 @@ export class DocumentTemplateListComponent implements OnInit {
                 buildingBlockDefinitionVersionTag: buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
                 templates
             })),
-        ).subscribe(_ => {
-            this.reloadTemplateList();
+        ).subscribe({
+            // a failed delete may still have deleted some of the templates
+            next: () => this.reloadTemplateList(),
+            error: () => this.reloadTemplateList(),
         });
     }
 
@@ -193,9 +199,12 @@ export class DocumentTemplateListComponent implements OnInit {
             switchMap(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) => this.templateService.getAllDocumentTemplates(caseDefinitionId, buildingBlockDefinitionId)),
             map(templatePage => templatePage.content),
             take(1)
-        ).subscribe(templateListItems => {
-            this.templates$.next(templateListItems);
-            this.loading$.next(false);
+        ).subscribe({
+            next: templateListItems => {
+                this.templates$.next(templateListItems);
+                this.loading$.next(false);
+            },
+            error: () => this.loading$.next(false),
         });
     }
 

@@ -29,10 +29,23 @@ data class UpdateTemplateRequest(
     val metadata: Map<String, Any?> = emptyMap(),
     val content: String,
 ) {
-    fun caseDefinitionId() = caseDefinitionKey?.let { CaseDefinitionId(caseDefinitionKey, caseDefinitionVersionTag!!) }
+    fun caseDefinitionId() =
+        caseDefinitionKey?.let {
+            CaseDefinitionId(
+                caseDefinitionKey,
+                requireNotNull(caseDefinitionVersionTag) {
+                    "caseDefinitionVersionTag is required"
+                },
+            )
+        }
 
     fun buildingBlockDefinitionId() =
         buildingBlockDefinitionKey?.let {
-            BuildingBlockDefinitionId(buildingBlockDefinitionKey, buildingBlockDefinitionVersionTag!!)
+            BuildingBlockDefinitionId(
+                buildingBlockDefinitionKey,
+                requireNotNull(buildingBlockDefinitionVersionTag) {
+                    "buildingBlockDefinitionVersionTag is required"
+                },
+            )
         }
 }

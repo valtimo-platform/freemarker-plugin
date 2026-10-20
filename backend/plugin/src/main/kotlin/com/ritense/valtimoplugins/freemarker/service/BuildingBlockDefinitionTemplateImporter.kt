@@ -59,12 +59,7 @@ class BuildingBlockDefinitionTemplateImporter(
         try {
             logger.info { "Deploying template from file '$fileName'" }
             val template = objectMapper.readValue<TemplateDeploymentMetadata>(fileContent)
-            require(template.content != null || template.contentRef != null) {
-                "Missing template content in file '$fileName'"
-            }
-            val content =
-                template.content
-                    ?: this::class.java.getResource(template.contentRef!!)!!.readText()
+            val content = template.readContent()
 
             templateService.saveTemplate(
                 templateKey = template.templateKey,

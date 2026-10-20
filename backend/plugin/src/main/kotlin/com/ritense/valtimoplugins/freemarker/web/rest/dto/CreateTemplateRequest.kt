@@ -28,10 +28,23 @@ data class CreateTemplateRequest(
     val type: String,
     val metadata: Map<String, Any?> = emptyMap(),
 ) {
-    fun caseDefinitionId() = caseDefinitionKey?.let { CaseDefinitionId(caseDefinitionKey, caseDefinitionVersionTag!!) }
+    fun caseDefinitionId() =
+        caseDefinitionKey?.let {
+            CaseDefinitionId(
+                caseDefinitionKey,
+                requireNotNull(caseDefinitionVersionTag) {
+                    "caseDefinitionVersionTag is required"
+                },
+            )
+        }
 
     fun buildingBlockDefinitionId() =
         buildingBlockDefinitionKey?.let {
-            BuildingBlockDefinitionId(buildingBlockDefinitionKey, buildingBlockDefinitionVersionTag!!)
+            BuildingBlockDefinitionId(
+                buildingBlockDefinitionKey,
+                requireNotNull(buildingBlockDefinitionVersionTag) {
+                    "buildingBlockDefinitionVersionTag is required"
+                },
+            )
         }
 }

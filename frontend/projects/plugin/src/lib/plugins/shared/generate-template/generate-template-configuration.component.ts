@@ -27,6 +27,7 @@ import {
 import {TranslateService} from '@ngx-translate/core';
 import {
     BehaviorSubject,
+    catchError,
     combineLatest,
     distinctUntilChanged,
     filter,
@@ -251,9 +252,11 @@ export abstract class GenerateTemplateConfigurationComponent
                         return of(null);
                     }
 
-                    return params.managementContext === 'case'
+                    const templates$ = params.managementContext === 'case'
                         ? this.fetchTemplates(params.caseParams, null)
                         : this.fetchTemplates(null, params.buildingBlockParams);
+                    // without the template list the key can still be entered as text
+                    return templates$.pipe(catchError(() => of(null)));
                 }),
                 map(results =>
                     results?.content.map(template => ({

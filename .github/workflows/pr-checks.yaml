@@ -29,7 +29,7 @@ jobs:
         run: ./gradlew :backend:plugin:test
 
   frontend-lint:
-    name: Frontend lint
+    name: Frontend lint and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,4 +44,8 @@ jobs:
 
       - name: Lint
         run: npm run lint
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build --workspace=projects/plugin
         working-directory: frontend

@@ -112,7 +112,7 @@ export class FreemarkerTemplateManagementService {
         }
       });
       return this.http.get<TemplateResponse>(
-            `${this.valtimoEndpointUri}v1/template-type/${templateType}/template/${key}`,
+            `${this.valtimoEndpointUri}v1/template-type/${templateType}/template/${encodeURIComponent(key)}`,
           {params}
         );
     }

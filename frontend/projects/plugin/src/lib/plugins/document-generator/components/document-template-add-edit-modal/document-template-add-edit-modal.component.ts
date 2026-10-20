@@ -16,8 +16,8 @@
 
 import {Component, EventEmitter, Input, OnInit, Output,} from '@angular/core';
 import {AbstractControl, FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
-import {TemplateMetadataModal} from '../../../../models';
-import {CARBON_CONSTANTS, KeyGeneratorService, ValtimoCdsModalDirective} from '@valtimo/components';
+import {TEMPLATE_KEY_PATTERN, TemplateMetadataModal} from '../../../../models';
+import {CARBON_CONSTANTS, ValtimoCdsModalDirective} from '@valtimo/components';
 import {CommonModule} from '@angular/common';
 import {ButtonModule, ComboBoxModule, DropdownModule, InputModule, ListItem, ModalModule} from 'carbon-components-angular';
 import {TranslateModule} from '@ngx-translate/core';
@@ -56,7 +56,7 @@ export class DocumentTemplateAddEditModalComponent implements OnInit {
     @Output() closeEvent = new EventEmitter<{ key: string; type: string } | null>();
 
     public form = this.fb.group({
-        key: this.fb.control('', Validators.required),
+        key: this.fb.control('', [Validators.required, Validators.pattern(TEMPLATE_KEY_PATTERN)]),
         type: this.fb.control(undefined, Validators.required),
     });
 
@@ -64,12 +64,7 @@ export class DocumentTemplateAddEditModalComponent implements OnInit {
     private _defaultTypeValue!: string;
 
     public get key(): AbstractControl<string> {
-        const key = this.form?.get('key');
-        if (!key?.value) {
-            return key;
-        }
-        key.setValue(this.keyGeneratorService.getUniqueKey(key.value, []));
-        return key;
+        return this.form?.get('key');
     }
 
     public get type(): AbstractControl<string> {
@@ -90,7 +85,6 @@ export class DocumentTemplateAddEditModalComponent implements OnInit {
 
     constructor(
         private readonly fb: FormBuilder,
-        private readonly keyGeneratorService: KeyGeneratorService,
     ) {
     }
 

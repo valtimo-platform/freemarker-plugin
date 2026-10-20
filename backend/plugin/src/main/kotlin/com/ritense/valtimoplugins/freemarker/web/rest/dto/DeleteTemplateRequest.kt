@@ -26,11 +26,24 @@ data class DeleteTemplateRequest(
     val buildingBlockDefinitionVersionTag: String? = null,
     val templates: List<TemplateKeyType>,
 ) {
-    fun caseDefinitionId() = caseDefinitionKey?.let { CaseDefinitionId(caseDefinitionKey, caseDefinitionVersionTag!!) }
+    fun caseDefinitionId() =
+        caseDefinitionKey?.let {
+            CaseDefinitionId(
+                caseDefinitionKey,
+                requireNotNull(caseDefinitionVersionTag) {
+                    "caseDefinitionVersionTag is required"
+                },
+            )
+        }
 
     fun buildingBlockDefinitionId() =
         buildingBlockDefinitionKey?.let {
-            BuildingBlockDefinitionId(buildingBlockDefinitionKey, buildingBlockDefinitionVersionTag!!)
+            BuildingBlockDefinitionId(
+                buildingBlockDefinitionKey,
+                requireNotNull(buildingBlockDefinitionVersionTag) {
+                    "buildingBlockDefinitionVersionTag is required"
+                },
+            )
         }
 }
 

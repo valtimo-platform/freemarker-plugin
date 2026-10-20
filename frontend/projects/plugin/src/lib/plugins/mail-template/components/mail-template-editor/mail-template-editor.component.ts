@@ -150,6 +150,7 @@ export class MailTemplateEditorComponent implements OnInit, AfterViewInit, OnDes
                         buildingBlockDefinitionKey: buildingBlockDefinitionId?.buildingBlockDefinitionKey,
                         buildingBlockDefinitionVersionTag: buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
                         type: 'mail',
+                        metadata: this.template$.value?.metadata,
                         content: updatedModelValue,
                     }
                 )
@@ -195,8 +196,15 @@ export class MailTemplateEditorComponent implements OnInit, AfterViewInit, OnDes
             }
           }),
           takeUntil(this._destroy$)
-        ).subscribe(targetUrl => {
-          this.router.navigate([targetUrl]);
+        ).subscribe({
+          next: targetUrl => {
+            this.router.navigate([targetUrl]);
+          },
+          error: () => {
+            this.enableMore();
+            this.enableSave();
+            this.enableEditor();
+          },
         });
     }
 

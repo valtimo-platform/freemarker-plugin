@@ -55,11 +55,6 @@ export class TextTemplateListComponent implements OnInit {
             key: 'key',
             label: 'Key',
         },
-        {
-            viewType: ViewType.BOOLEAN,
-            key: 'readOnly',
-            label: 'Read only',
-        },
     ];
 
     private readonly _caseDefinitionId$: Observable<CaseManagementParams> = getCaseManagementRouteParams(this.route).pipe(
@@ -123,15 +118,19 @@ export class TextTemplateListComponent implements OnInit {
                 buildingBlockDefinitionVersionTag: buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
                 type: 'text', ...data
             }))
-        ).subscribe(template => {
-            this.showAddModal$.next(false);
-            this.gotoTextTemplateEditor(
-                template.caseDefinitionKey,
-                template.caseDefinitionVersionTag,
-                template.buildingBlockDefinitionKey,
-                template.buildingBlockDefinitionVersionTag,
-                template.key
-            );
+        ).subscribe({
+            next: template => {
+                this.showAddModal$.next(false);
+                this.gotoTextTemplateEditor(
+                    template.caseDefinitionKey,
+                    template.caseDefinitionVersionTag,
+                    template.buildingBlockDefinitionKey,
+                    template.buildingBlockDefinitionVersionTag,
+                    template.key
+                );
+            },
+            // the modal has already reset its form, so it can't be retried
+            error: () => this.showAddModal$.next(false),
         });
     }
 
@@ -151,8 +150,10 @@ export class TextTemplateListComponent implements OnInit {
                 buildingBlockDefinitionVersionTag: buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
                 templates
             })),
-        ).subscribe(_ => {
-            this.reloadTemplateList();
+        ).subscribe({
+            // a failed delete may still have deleted some of the templates
+            next: () => this.reloadTemplateList(),
+            error: () => this.reloadTemplateList(),
         });
     }
 
@@ -188,9 +189,12 @@ export class TextTemplateListComponent implements OnInit {
             switchMap(({case: caseDefinitionId, buildingBlock: buildingBlockDefinitionId}) => this.templateService.getAllTextTemplates(caseDefinitionId, buildingBlockDefinitionId)),
             map(templatePage => templatePage.content),
             take(1)
-        ).subscribe(templateListItems => {
-            this.templates$.next(templateListItems);
-            this.loading$.next(false);
+        ).subscribe({
+            next: templateListItems => {
+                this.templates$.next(templateListItems);
+                this.loading$.next(false);
+            },
+            error: () => this.loading$.next(false),
         });
     }
 

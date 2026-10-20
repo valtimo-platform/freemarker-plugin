@@ -2,6 +2,15 @@
 
 Contains three plugins which all use Freemarker.
 
+Mail and PDF templates escape every value they insert as HTML, so `Smith & Sons` stays readable and a value can't add
+markup to the mail or PDF. To insert a value that is HTML on purpose, write `${value?no_esc}`. Templates that already
+escape with `?html` or `<#escape>` keep working as before, but then none of their values is escaped automatically and
+they can't use `?no_esc`; remove `?html` and `<#escape>` to have the template escaped. CSV templates escape tabs, line
+breaks, quotes and backslashes in a value, so it stays in one field. A backslash written in the CSV template itself
+starts an escape sequence (`\t` is a tab, `\n` a line break, `\r` a carriage return, `\b` a backspace, `\f` a form
+feed, `\\` a backslash). A single backslash at the end of a line joins it to the next line, and at the end of the
+template it makes the CSV generation fail. Text templates don't escape.
+
 ## Plugin 1: Mail Template Plugin
 
 For creating HTML mail templates with Freemarker.
@@ -48,6 +57,7 @@ https://github.com/user-attachments/assets/3b27631d-bbda-406e-b6b7-f6e5be21f9b9
   provided in three ways: by selecting an existing template, by entering free text or a value-resolver expression (e.g.
   `pv:myKey` or `doc:/path`), or by selecting a document/case field via a value resolver.
 - `processVariableName` — The name of the process variable where the result will be stored (resource ID for `generate-text-file`, generated text for `generate-text`).
+  Generated text longer than 4000 characters needs Valtimo 13.51.0 or later.
 
 ### Value resolver
 

@@ -50,6 +50,13 @@ class ValtimoTemplateSpecificationHelper {
                 }
             }
 
+        /** Templates of any version of the case definition */
+        @JvmStatic
+        fun byCaseDefinitionKey(caseDefinitionKey: String) =
+            Specification<ValtimoTemplate> { root, _, cb ->
+                cb.equal(root.get<Any>(CASE_DEFINITION_ID).get<String>("key"), caseDefinitionKey)
+            }
+
         @JvmStatic
         fun byBuildingBlockDefinitionId(buildingBlockDefinitionId: BuildingBlockDefinitionId?) =
             Specification<ValtimoTemplate> { root, _, cb ->
