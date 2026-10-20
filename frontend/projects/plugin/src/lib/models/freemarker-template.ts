@@ -78,6 +78,9 @@ interface TemplatePreviewRequest {
 type TemplateMetadataModal = 'add' | 'edit';
 type TemplateType = 'mail' | 'text' | 'pdf' | 'csv';
 
+/** Letters, digits, dashes and underscores; the key is used in URLs and in `template:<key>`. */
+const TEMPLATE_KEY_PATTERN = /^[A-Za-z0-9_-]+$/;
+
 export {
     TemplateListItem,
     CreateTemplateRequest,
@@ -87,5 +90,6 @@ export {
     TemplateResponse,
     TemplateMetadataModal,
     TemplateType,
-    TemplatePreviewRequest
+    TemplatePreviewRequest,
+    TEMPLATE_KEY_PATTERN,
 };

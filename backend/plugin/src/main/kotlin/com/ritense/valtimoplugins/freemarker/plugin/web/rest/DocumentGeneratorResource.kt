@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
+import java.io.ByteArrayOutputStream
 import java.net.URLConnection
 
 @RestController
@@ -45,7 +45,7 @@ class DocumentGeneratorResource(
     @PostMapping("/v1/template/preview")
     fun getTemplatePreview(
         @RequestBody request: TemplatePreviewRequest,
-    ): ResponseEntity<StreamingResponseBody> {
+    ): ResponseEntity<ByteArray> {
         val documentGeneratorPlugin =
             pluginService.createInstance(DocumentGeneratorPlugin::class.java) { true }
                 ?: throw RuntimeException("ERROR: Missing plugin configuration: 'Document generator'.")
@@ -55,6 +55,7 @@ class DocumentGeneratorResource(
                 templateName = request.fileName,
                 templateContent = request.content,
                 missingPlaceholderStrategy = SHOW_MISSING_PLACEHOLDER,
+                templateType = request.fileName.substringAfterLast('.', ""),
             )
 
         val fileMediaType =
@@ -64,15 +65,17 @@ class DocumentGeneratorResource(
                 APPLICATION_OCTET_STREAM
             }
 
-        val stream =
-            StreamingResponseBody { out ->
+        // Rendered before responding, so a failure is an error response instead of a broken download
+        val content =
+            ByteArrayOutputStream().use { out ->
                 if (fileMediaType == APPLICATION_PDF) {
                     documentGeneratorPlugin.generatePdf(preview, out)
                 } else if (fileMediaType.subtype == "csv") {
                     documentGeneratorPlugin.generateCsv(preview, out)
                 } else {
-                    out.use { it.write(preview.toByteArray()) }
+                    out.write(preview.toByteArray())
                 }
+                out.toByteArray()
             }
 
         return ResponseEntity
@@ -84,6 +87,6 @@ class DocumentGeneratorResource(
                         .filename(request.fileName, Charsets.UTF_8)
                         .build()
             }.contentType(fileMediaType)
-            .body(stream)
+            .body(content)
     }
 }

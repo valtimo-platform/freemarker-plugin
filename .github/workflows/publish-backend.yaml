@@ -8,6 +8,9 @@ on:
       - v12
       - main
 
+permissions:
+  contents: read
+
 jobs:
   # -------------------------------------------------------------
   # Using GitHub's API is not supported for push events
@@ -38,7 +41,7 @@ jobs:
           matrix: 'true'
           files: |
             backend/plugin/**
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@a284dc1814e3fd07f2e34267fc8f81227ed29fb8 # v45.0.9
       # NOTE: `since_last_remote_commit: true` is implied by default and falls back to the previous local commit.
 
   Build-and-publish:
@@ -65,23 +68,25 @@ jobs:
         uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
       - name: Listing changed plugin folders
-        run: echo ${{ matrix.value }}
+        run: echo "$CHANGED_DIR"
+        env:
+          CHANGED_DIR: ${{ matrix.value }}
 
       - id: gradleTaskAlize
         name: Construct Gradle task name from matrix variant
-        run: CHANGED_DIR=${{ matrix.value }}; echo "TASK_NAME=$(echo :$CHANGED_DIR:publishToCentralPortal | sed -e 's/\//:/g')">>${GITHUB_OUTPUT}
+        run: echo "TASK_NAME=$(echo :$CHANGED_DIR:publishToCentralPortal | sed -e 's/\//:/g')">>${GITHUB_OUTPUT}
         env:
           CHANGED_DIR: ${{ matrix.value }}
 
       - id: gradleTestTaskAlize
         name: Construct Gradle test task name from matrix variant
-        run: CHANGED_DIR=${{ matrix.value }}; echo "TASK_NAME=$(echo :$CHANGED_DIR:test | sed -e 's/\//:/g')">>${GITHUB_OUTPUT}
+        run: echo "TASK_NAME=$(echo :$CHANGED_DIR:test | sed -e 's/\//:/g')">>${GITHUB_OUTPUT}
         env:
           CHANGED_DIR: ${{ matrix.value }}
 
       - id: gradleS3TaskAlize
         name: Construct Gradle S3 publish task name from matrix variant
-        run: CHANGED_DIR=${{ matrix.value }}; echo "TASK_NAME=$(echo :$CHANGED_DIR:publishAllPublicationsToS3Repository | sed -e 's/\//:/g')">>${GITHUB_OUTPUT}
+        run: echo "TASK_NAME=$(echo :$CHANGED_DIR:publishAllPublicationsToS3Repository | sed -e 's/\//:/g')">>${GITHUB_OUTPUT}
         env:
           CHANGED_DIR: ${{ matrix.value }}
 

@@ -24,9 +24,14 @@ import com.ritense.document.domain.impl.JsonSchemaDocumentId
 import com.ritense.valtimo.contract.case_.CaseDefinitionId
 import com.ritense.valtimoplugins.freemarker.autoconfiguration.TemplateAutoConfiguration
 import com.ritense.valtimoplugins.freemarker.domain.ValtimoTemplate
+import com.ritense.valtimoplugins.freemarker.model.MissingPlaceholderStrategy
+import com.ritense.valtimoplugins.freemarker.plugin.documentgenerator.DocumentGeneratorPlugin
 import com.ritense.valtimoplugins.freemarker.repository.JsonSchemaDocumentRepositoryStreaming
 import com.ritense.valtimoplugins.freemarker.repository.TemplateRepository
 import com.ritense.valueresolver.ValueResolverService
+import freemarker.core.TemplateClassResolver
+import freemarker.template.Configuration
+import org.apache.commons.csv.CSVFormat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -37,6 +42,8 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.data.jpa.domain.Specification
+import java.io.ByteArrayOutputStream
+import java.io.StringReader
 import java.util.Optional
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -81,6 +88,31 @@ class TemplateServiceTest {
 
         assertEquals("Anna\nBram\n", result)
         verify(jsonSchemaDocumentRepositoryStreaming).streamContentByBlueprintKey(BLUEPRINT_KEY)
+    }
+
+    @Test
+    fun `should list docs when the application configures FreeMarker itself`() {
+        val templateService =
+            TemplateService(
+                templateRepository = templateRepository,
+                objectMapper = ObjectMapper(),
+                valueResolverService = valueResolverService,
+                freemarkerConfiguration = Configuration(Configuration.VERSION_2_3_34),
+                caseDefinitionChecker = mock(),
+                buildingBlockDefinitionChecker = mock(),
+                jsonSchemaDocumentRepositoryStreaming = jsonSchemaDocumentRepositoryStreaming,
+            )
+        whenever(jsonSchemaDocumentRepositoryStreaming.streamContentByBlueprintKey(BLUEPRINT_KEY))
+            .thenReturn(Stream.of("""{"firstName":"Anna"}"""))
+
+        val result =
+            templateService.generate(
+                templateName = "docs.csv",
+                templateContent = "<#list docs as doc>\${doc.firstName}</#list>",
+                document = document,
+            )
+
+        assertEquals("Anna", result)
     }
 
     @Test
@@ -172,6 +204,140 @@ class TemplateServiceTest {
         val result = templateService.generate("greeting", "text", document)
 
         assertEquals("Hi Klaas", result)
+    }
+
+    @Test
+    fun `should escape document values in mail and pdf templates`() {
+        val document = documentOf("""{"name":"Smith & <Sons>"}""")
+
+        listOf("mail", "pdf").forEach { templateType ->
+            val result =
+                templateService.generate(
+                    templateName = "escape",
+                    templateContent = "<p>\${doc.name}</p>",
+                    document = document,
+                    templateType = templateType,
+                )
+
+            assertEquals("<p>Smith &amp; &lt;Sons&gt;</p>", result, templateType)
+        }
+    }
+
+    @Test
+    fun `should not escape document values in text templates`() {
+        val result =
+            templateService.generate(
+                templateName = "escape",
+                templateContent = "\${doc.name}",
+                document = documentOf("""{"name":"Smith & <Sons>"}"""),
+                templateType = "text",
+            )
+
+        assertEquals("Smith & <Sons>", result)
+    }
+
+    @Test
+    fun `should keep generating mail templates that escape with the html built-in`() {
+        val result =
+            templateService.generate(
+                templateName = "escape",
+                templateContent = "<p>\${doc.name?html}</p>",
+                document = documentOf("""{"name":"Smith & Sons"}"""),
+                templateType = "mail",
+            )
+
+        assertEquals("<p>Smith &amp; Sons</p>", result)
+    }
+
+    @Test
+    fun `should not escape values marked with the no_esc built-in in mail templates`() {
+        val result =
+            templateService.generate(
+                templateName = "escape",
+                templateContent = "<p>\${doc.name?no_esc}</p>",
+                document = documentOf("""{"name":"<b>Smith</b>"}"""),
+                templateType = "mail",
+            )
+
+        assertEquals("<p><b>Smith</b></p>", result)
+    }
+
+    @Test
+    fun `should not create a template with a key that can't be used in a URL`() {
+        listOf("", " ", "a/b").forEach { key ->
+            assertThrows<IllegalArgumentException>(key) {
+                templateService.createTemplate(key, CaseDefinitionId("profile", "1.0.0"), null, "text", emptyMap())
+            }
+        }
+    }
+
+    @Test
+    fun `should not instantiate classes when the application configures FreeMarker itself`() {
+        val templateService =
+            TemplateService(
+                templateRepository = templateRepository,
+                objectMapper = ObjectMapper(),
+                valueResolverService = valueResolverService,
+                freemarkerConfiguration =
+                    Configuration(Configuration.VERSION_2_3_34).apply {
+                        newBuiltinClassResolver = TemplateClassResolver.UNRESTRICTED_RESOLVER
+                    },
+                caseDefinitionChecker = mock(),
+                buildingBlockDefinitionChecker = mock(),
+                jsonSchemaDocumentRepositoryStreaming = jsonSchemaDocumentRepositoryStreaming,
+            )
+
+        val exception =
+            assertThrows<Exception> {
+                templateService.generate(
+                    templateName = "unsafe",
+                    templateContent = "<#assign ex = 'freemarker.template.utility.Execute'?new()>\${ex('id')}",
+                )
+            }
+
+        assertTrue(exception.message!!.contains("Execute"), exception.message)
+    }
+
+    @Test
+    fun `should show a missing placeholder whose path repeats a name`() {
+        val result =
+            templateService.generate(
+                templateName = "repeat",
+                templateContent = "\${pv.a.a}",
+                missingPlaceholderStrategy = MissingPlaceholderStrategy.SHOW_MISSING_PLACEHOLDER,
+            )
+
+        assertEquals("\${pv.a.a}", result)
+    }
+
+    @Test
+    fun `should keep document values with tabs, line breaks and quotes in one csv field`() {
+        val values = listOf("Main St 1\nAmsterdam", "a\tb", "\"Bob\" Jr", "O\"Brien", "C:\\new", "plain")
+        val document = documentOf(ObjectMapper().writeValueAsString(mapOf("values" to values)))
+
+        // the second column combines a value with other text
+        val csv =
+            templateService.generate(
+                templateName = "values",
+                templateContent =
+                    "value\tcombined\n<#list doc.values as value>\${value}\t\${value} (\${value})\n</#list>",
+                document = document,
+                templateType = "csv",
+            )
+        val out = ByteArrayOutputStream()
+        DocumentGeneratorPlugin(mock(), mock(), mock()).generateCsv(csv, out)
+
+        val records = CSVFormat.TDF.parse(StringReader(out.toString(Charsets.UTF_8))).records
+        assertEquals(listOf("value") + values, records.map { it[0] })
+        assertEquals(listOf("combined") + values.map { "$it ($it)" }, records.map { it[1] })
+        assertTrue(records.all { it.size() == 2 })
+    }
+
+    @Test
+    fun `should not create a template of a type no plugin uses`() {
+        assertThrows<IllegalArgumentException> {
+            templateService.createTemplate("letter", CaseDefinitionId("profile", "1.0.0"), null, "html", emptyMap())
+        }
     }
 
     private fun documentOf(content: String): JsonSchemaDocument =

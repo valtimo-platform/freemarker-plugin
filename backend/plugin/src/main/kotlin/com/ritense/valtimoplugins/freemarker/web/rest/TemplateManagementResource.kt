@@ -59,11 +59,19 @@ class TemplateManagementResource(
     ): ResponseEntity<Page<TemplateListItemResponse>> {
         val caseDefinitionId =
             caseDefinitionKey?.let {
-                CaseDefinitionId(caseDefinitionKey, caseDefinitionVersionTag!!)
+                CaseDefinitionId(
+                    caseDefinitionKey,
+                    requireNotNull(caseDefinitionVersionTag) { "caseDefinitionVersionTag is required" },
+                )
             }
         val buildingBlockDefinitionId =
             buildingBlockDefinitionKey?.let {
-                BuildingBlockDefinitionId(buildingBlockDefinitionKey, buildingBlockDefinitionVersionTag!!)
+                BuildingBlockDefinitionId(
+                    buildingBlockDefinitionKey,
+                    requireNotNull(buildingBlockDefinitionVersionTag) {
+                        "buildingBlockDefinitionVersionTag is required"
+                    },
+                )
             }
         val templates =
             templateService.findTemplateKeys(
@@ -89,16 +97,23 @@ class TemplateManagementResource(
     ): ResponseEntity<TemplateResponse> {
         val caseDefinitionId =
             caseDefinitionKey?.let {
-                CaseDefinitionId(caseDefinitionKey, caseDefinitionVersionTag!!)
+                CaseDefinitionId(
+                    caseDefinitionKey,
+                    requireNotNull(caseDefinitionVersionTag) { "caseDefinitionVersionTag is required" },
+                )
             }
         val buildingBlockDefinitionId =
             buildingBlockDefinitionKey?.let {
-                BuildingBlockDefinitionId(buildingBlockDefinitionKey, buildingBlockDefinitionVersionTag!!)
+                BuildingBlockDefinitionId(
+                    buildingBlockDefinitionKey,
+                    requireNotNull(buildingBlockDefinitionVersionTag) {
+                        "buildingBlockDefinitionVersionTag is required"
+                    },
+                )
             }
-        require(caseDefinitionId != null || buildingBlockDefinitionId != null) {
-            "Either caseDefinitionKey or buildingBlockDefinitionKey must be provided"
-        }
-        val template = templateService.getTemplate(key, caseDefinitionId, buildingBlockDefinitionId, templateType)
+        val template =
+            templateService.findTemplate(key, caseDefinitionId, buildingBlockDefinitionId, templateType)
+                ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(TemplateResponse.of(template))
     }
 
@@ -121,6 +136,8 @@ class TemplateManagementResource(
     fun updateTemplate(
         @RequestBody request: UpdateTemplateRequest,
     ): ResponseEntity<TemplateResponse> {
+        TemplateService.requireValidTemplateKey(request.key)
+        TemplateService.requireValidTemplateType(request.type)
         val template =
             templateService.saveTemplate(
                 templateKey = request.key,

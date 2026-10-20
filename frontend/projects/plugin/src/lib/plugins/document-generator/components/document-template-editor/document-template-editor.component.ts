@@ -153,6 +153,7 @@ export class DocumentTemplateEditorComponent implements OnInit, AfterViewInit, O
                         buildingBlockDefinitionKey: buildingBlockDefinitionId?.buildingBlockDefinitionKey,
                         buildingBlockDefinitionVersionTag: buildingBlockDefinitionId?.buildingBlockDefinitionVersionTag,
                         type: templateType,
+                        metadata: this.template$.value?.metadata,
                         content: updatedModelValue,
                     }
                 )
@@ -198,8 +199,15 @@ export class DocumentTemplateEditorComponent implements OnInit, AfterViewInit, O
                 }
             }),
             takeUntil(this._destroy$)
-        ).subscribe(targetUrl => {
-            this.router.navigate([targetUrl]);
+        ).subscribe({
+            next: targetUrl => {
+                this.router.navigate([targetUrl]);
+            },
+            error: () => {
+                this.enableMore();
+                this.enableSave();
+                this.enableEditor();
+            },
         });
     }
 
@@ -266,7 +274,7 @@ export class DocumentTemplateEditorComponent implements OnInit, AfterViewInit, O
         setTimeout(() => {
             const preview = document.getElementById('preview-iframe') as HTMLIFrameElement;
             if (preview) {
-                preview.src = window.URL.createObjectURL(new Blob([""], { type: "text/plain" }));
+                this.showPreview(preview, new Blob([""], { type: "text/plain" }));
                 combineLatest([this.updatedModelValue$, this.template$]).pipe(
                     take(1),
                     switchMap(([updatedModelValue, template]) =>
@@ -279,7 +287,7 @@ export class DocumentTemplateEditorComponent implements OnInit, AfterViewInit, O
                     )
                 ).subscribe({
                     next: ([blob, filename]) => {
-                        preview.src = URL.createObjectURL(blob);
+                        this.showPreview(preview, blob);
                     },
                     error: (err) => {
                         console.error("Preview failed:", err);
@@ -288,11 +296,18 @@ export class DocumentTemplateEditorComponent implements OnInit, AfterViewInit, O
                             [`<html><body><h2>Error loading preview</h2><p>See logs for more information</p></body></html>`],
                             { type: 'text/html' }
                         );
-                        preview.src = URL.createObjectURL(errorBlob);
+                        this.showPreview(preview, errorBlob);
                     }
                 });
             }
         }, 100);
+    }
+
+    private showPreview(preview: HTMLIFrameElement, blob: Blob): void {
+        if (preview.src.startsWith('blob:')) {
+            URL.revokeObjectURL(preview.src);
+        }
+        preview.src = URL.createObjectURL(blob);
     }
 
     private isFinal(caseDefinitionId: CaseManagementParams | undefined, buildingBlockDefinitionId: BuildingBlockManagementParams | undefined): Observable<boolean> {

@@ -15,6 +15,7 @@
  */
 
 import { NgModule } from "@angular/core";
+import { Router } from "@angular/router";
 import { DocumentGeneratorConfigurationComponent } from "./components/document-generator-configuration/document-generator-configuration.component";
 import { CommonModule } from "@angular/common";
 import { PluginManagementService, PluginTranslatePipeModule } from "@valtimo/plugin";
@@ -41,13 +42,13 @@ import {
   TabsModule,
 } from "carbon-components-angular";
 import { BUILDING_BLOCK_MANAGEMENT_TAB_TOKEN, CASE_MANAGEMENT_TAB_TOKEN } from "@valtimo/shared";
+import { pluginTabEnabled$ } from "../shared/plugin-tab/plugin-tab-enabled";
 import { DocumentTemplateListComponent } from "./components/document-template-list/document-template-list.component";
 import { TranslateModule } from "@ngx-translate/core";
 import { ReactiveFormsModule } from "@angular/forms";
 import { TemplateManagementRoutingModule } from "./document-generator-management-routing.module";
 import { GenerateCsvComponent } from "./components/generate-csv/generate-csv.component";
 import { GeneratePdfComponent } from "./components/generate-pdf/generate-pdf.component";
-import { catchError, map, of } from "rxjs";
 
 @NgModule({
   declarations: [GenerateCsvComponent, GeneratePdfComponent, DocumentGeneratorConfigurationComponent],
@@ -80,30 +81,24 @@ import { catchError, map, of } from "rxjs";
   providers: [
     {
       provide: CASE_MANAGEMENT_TAB_TOKEN,
-      useFactory: (pluginManagementService: PluginManagementService) => ({
+      useFactory: (pluginManagementService: PluginManagementService, router: Router) => ({
         translationKey: "Document template",
         component: DocumentTemplateListComponent,
         tabRoute: "document-template",
-        enabled$: pluginManagementService.getAllPluginConfigurations().pipe(
-          map((pluginConfigs) => pluginConfigs.find((pluginConfig) => pluginConfig.pluginDefinition?.key === "document-generator")),
-          catchError(() => of(false)),
-        ),
+        enabled$: pluginTabEnabled$(pluginManagementService, router, "document-generator", "document-template"),
       }),
-      deps: [PluginManagementService],
+      deps: [PluginManagementService, Router],
       multi: true,
     },
     {
       provide: BUILDING_BLOCK_MANAGEMENT_TAB_TOKEN,
-      useFactory: (pluginManagementService: PluginManagementService) => ({
+      useFactory: (pluginManagementService: PluginManagementService, router: Router) => ({
         translationKey: "Document template",
         component: DocumentTemplateListComponent,
         tabRoute: "document-template",
-        enabled$: pluginManagementService.getAllPluginConfigurations().pipe(
-          map((pluginConfigs) => pluginConfigs.find((pluginConfig) => pluginConfig.pluginDefinition?.key === "document-generator")),
-          catchError(() => of(false)),
-        ),
+        enabled$: pluginTabEnabled$(pluginManagementService, router, "document-generator", "document-template"),
       }),
-      deps: [PluginManagementService],
+      deps: [PluginManagementService, Router],
       multi: true,
     },
   ],

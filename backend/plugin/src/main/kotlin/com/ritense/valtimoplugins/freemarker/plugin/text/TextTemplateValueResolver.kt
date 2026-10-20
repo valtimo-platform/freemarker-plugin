@@ -24,6 +24,7 @@ import com.ritense.valtimo.contract.BlueprintId
 import com.ritense.valtimo.contract.annotation.SkipComponentScan
 import com.ritense.valtimo.contract.buildingblock.BuildingBlockDefinitionId
 import com.ritense.valtimo.contract.case_.CaseDefinitionId
+import com.ritense.valtimoplugins.freemarker.model.CircularTemplateReferenceException
 import com.ritense.valtimoplugins.freemarker.model.MissingPlaceholderStrategy.REPLACE_MISSING_PLACEHOLDER_WITH_EMPTY_VALUE
 import com.ritense.valtimoplugins.freemarker.model.TEMPLATE_TYPE_TEXT
 import com.ritense.valtimoplugins.freemarker.service.TemplateService
@@ -95,47 +96,50 @@ class TextTemplateValueResolver(
         return createFieldList(templateKeys)
     }
 
-    override fun getResolvableKeyOptions(blueprintId: BlueprintId): List<ValueResolverOption> {
-        val templateKeys =
-            templateService
-                .findTemplateKeys(
-                    buildingBlockDefinitionId =
-                        BuildingBlockDefinitionId(
-                            blueprintId.getIdKey(),
-                            blueprintId.getTagPrefix(),
-                        ),
-                    templateType = TEMPLATE_TYPE_TEXT,
-                ).content
-                .map { it.key }
-        return createFieldList(templateKeys)
-    }
+    override fun getResolvableKeyOptions(blueprintId: BlueprintId): List<ValueResolverOption> =
+        when (blueprintId) {
+            is CaseDefinitionId -> getResolvableKeyOptions(blueprintId)
+            is BuildingBlockDefinitionId ->
+                createFieldList(
+                    templateService
+                        .findTemplateKeys(
+                            buildingBlockDefinitionId = blueprintId,
+                            templateType = TEMPLATE_TYPE_TEXT,
+                        ).content
+                        .map { it.key },
+                )
+            else -> emptyList()
+        }
 
-    override fun getResolvableKeyOptions(caseDefinitionKey: String): List<ValueResolverOption> {
-        val templateKeys =
-            templateService
-                .findTemplateKeys(
-                    caseDefinitionId = null,
-                    templateType = TEMPLATE_TYPE_TEXT,
-                ).content
-                .map { it.key }
-        return createFieldList(templateKeys)
-    }
+    override fun getResolvableKeyOptions(caseDefinitionKey: String): List<ValueResolverOption> =
+        createFieldList(templateService.findTemplateKeysByCaseDefinitionKey(caseDefinitionKey, TEMPLATE_TYPE_TEXT))
 
     protected fun createResolver(
         document: Document,
         processVariables: Map<String, Any?> = emptyMap(),
     ): Function<String, Any?> =
         Function { requestedValue ->
-            templateService.generate(
-                templateKey = requestedValue,
-                templateType = TEMPLATE_TYPE_TEXT,
-                document = document,
-                processVariables = processVariables,
-                missingPlaceholderStrategy = REPLACE_MISSING_PLACEHOLDER_WITH_EMPTY_VALUE,
-            )
+            // A template that (indirectly) uses itself would recurse until the stack overflows
+            val generating = templatesBeingGenerated.get()
+            if (!generating.add(requestedValue)) {
+                throw CircularTemplateReferenceException(requestedValue)
+            }
+            try {
+                templateService.generate(
+                    templateKey = requestedValue,
+                    templateType = TEMPLATE_TYPE_TEXT,
+                    document = document,
+                    processVariables = processVariables,
+                    missingPlaceholderStrategy = REPLACE_MISSING_PLACEHOLDER_WITH_EMPTY_VALUE,
+                )
+            } finally {
+                generating.remove(requestedValue)
+            }
         }
 
     companion object {
         const val PREFIX = "template"
+
+        private val templatesBeingGenerated = ThreadLocal.withInitial { mutableSetOf<String>() }
     }
 }

@@ -8,6 +8,9 @@ on:
       - v12
       - main
 
+permissions:
+  contents: read
+
 jobs:
   # -------------------------------------------------------------
   # Using GitHub's API is not supported for push events
@@ -36,7 +39,7 @@ jobs:
           dir_names_max_depth: '1'
           matrix: 'true'
           path: 'frontend/projects'
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@a284dc1814e3fd07f2e34267fc8f81227ed29fb8 # v45.0.9
       # NOTE: `since_last_remote_commit: true` is implied by default and falls back to the previous local commit.
 
   Build-and-publish:
@@ -61,13 +64,18 @@ jobs:
       - run: npm install
         working-directory: frontend
 
-      - run: npm run build --workspace=projects/${{ matrix.value }}
+      - run: npm run build --workspace="projects/$CHANGED_DIR"
         working-directory: frontend
+        env:
+          CHANGED_DIR: ${{ matrix.value }}
 
       - name: Publish
         run: |
-          PUBLISH_PATH=$(node -e "const p=require('path'); const d=require('./projects/${{ matrix.value }}/ng-package.json').dest; console.log(p.normalize(p.join('projects/${{ matrix.value }}', d)))")
-          npm publish "$PUBLISH_PATH" --access public
+          PUBLISH_PATH=$(node -e "const p=require('path'); const d=require('./projects/' + process.env.CHANGED_DIR + '/ng-package.json').dest; console.log(p.normalize(p.join('projects', process.env.CHANGED_DIR, d)))")
+          # A v12 release must not become the latest version for Valtimo 13 users
+          NPM_TAG=$([ "$GITHUB_REF_NAME" = "v12" ] && echo v12 || echo latest)
+          npm publish "$PUBLISH_PATH" --access public --tag "$NPM_TAG"
         working-directory: frontend
         env:
+          CHANGED_DIR: ${{ matrix.value }}
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_SECRET }}

@@ -15,6 +15,7 @@
  */
 
 import { NgModule } from "@angular/core";
+import { Router } from "@angular/router";
 import { TextTemplateConfigurationComponent } from "./components/text-template-configuration/text-template-configuration.component";
 import { CommonModule } from "@angular/common";
 import { PluginManagementService, PluginTranslatePipeModule } from "@valtimo/plugin";
@@ -41,13 +42,13 @@ import {
   TabsModule,
 } from "carbon-components-angular";
 import { BUILDING_BLOCK_MANAGEMENT_TAB_TOKEN, CASE_MANAGEMENT_TAB_TOKEN } from "@valtimo/shared";
+import { pluginTabEnabled$ } from "../shared/plugin-tab/plugin-tab-enabled";
 import { TextTemplateListComponent } from "../text-template/components/text-template-list/text-template-list.component";
 import { TranslateModule } from "@ngx-translate/core";
 import { ReactiveFormsModule } from "@angular/forms";
 import { TemplateManagementRoutingModule } from "./text-template-management-routing.module";
 import { GenerateTextFileComponent } from "./components/generate-text-file/generate-text-file.component";
 import { GenerateTextComponent } from "./components/generate-text/generate-text.component";
-import { catchError, map, of } from "rxjs";
 
 @NgModule({
   declarations: [GenerateTextFileComponent, GenerateTextComponent, TextTemplateConfigurationComponent],
@@ -80,32 +81,26 @@ import { catchError, map, of } from "rxjs";
   providers: [
     {
       provide: CASE_MANAGEMENT_TAB_TOKEN,
-      useFactory: (pluginManagementService: PluginManagementService) => ({
+      useFactory: (pluginManagementService: PluginManagementService, router: Router) => ({
         translationKey: "Text template",
         component: TextTemplateListComponent,
         tabRoute: "text-template",
-        enabled$: pluginManagementService.getAllPluginConfigurations().pipe(
-          map((pluginConfigs) => pluginConfigs.find((pluginConfig) => pluginConfig.pluginDefinition?.key === "text-template")),
-          catchError(() => of(false)),
-        ),
+        enabled$: pluginTabEnabled$(pluginManagementService, router, "text-template", "text-template"),
       }),
-      deps: [PluginManagementService],
+      deps: [PluginManagementService, Router],
       multi: true,
     },
     {
       provide: BUILDING_BLOCK_MANAGEMENT_TAB_TOKEN,
-      useFactory: (pluginManagementService: PluginManagementService) => {
+      useFactory: (pluginManagementService: PluginManagementService, router: Router) => {
         return {
           translationKey: "Text template",
           component: TextTemplateListComponent,
           tabRoute: "text-template",
-          enabled$: pluginManagementService.getAllPluginConfigurations().pipe(
-            map((pluginConfigs) => pluginConfigs.find((pluginConfig) => pluginConfig.pluginDefinition?.key === "text-template")),
-            catchError(() => of(false)),
-          ),
+          enabled$: pluginTabEnabled$(pluginManagementService, router, "text-template", "text-template"),
         };
       },
-      deps: [PluginManagementService],
+      deps: [PluginManagementService, Router],
       multi: true,
     },
   ],
